@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { parseFeedUrl, isRedditFeed } from "@/lib/rss";
+import { parseFeedUrl } from "@/lib/rss";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
     const parsed = await parseFeedUrl(feed.url);
 
     let newCount = 0;
-    const reddit = isRedditFeed(feed.url);
 
     for (const item of parsed.items) {
       const existing = await db.article.findUnique({
@@ -44,11 +43,17 @@ export async function POST(request: NextRequest) {
           },
         });
         newCount++;
-      } else if (reddit) {
-        // Reddit feeds: update existing articles missing imageUrl or content
+      } else {
+        // Backpatch: update existing articles with missing/incorrect data
         const updates: { imageUrl?: string; content?: string } = {};
+        const existingHasHtml = existing.content && /<\w+[^>]*>/.test(existing.content);
+        const newHasHtml = item.content && /<\w+[^>]*>/.test(item.content);
+
+        // Update content if existing has no HTML but the feed now provides HTML
+        if (!existingHasHtml && newHasHtml) updates.content = item.content;
+        // Update imageUrl if missing
         if (!existing.imageUrl && item.imageUrl) updates.imageUrl = item.imageUrl;
-        if (!existing.content && item.content) updates.content = item.content;
+
         if (updates.imageUrl || updates.content) {
           await db.article.update({ where: { id: existing.id }, data: updates });
         }

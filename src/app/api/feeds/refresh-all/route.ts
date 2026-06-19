@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { parseFeedUrl, isRedditFeed } from "@/lib/rss";
+import { parseFeedUrl } from "@/lib/rss";
 
 export async function POST() {
   try {
@@ -10,7 +10,6 @@ export async function POST() {
     for (const feed of feeds) {
       try {
         const parsed = await parseFeedUrl(feed.url);
-        const reddit = isRedditFeed(feed.url);
 
         for (const item of parsed.items) {
           const existing = await db.article.findUnique({
@@ -30,11 +29,15 @@ export async function POST() {
               },
             });
             totalNew++;
-          } else if (reddit) {
-            // Reddit feeds: update existing articles missing imageUrl or content
+          } else {
+            // Backpatch: update existing articles with missing/incorrect data
             const updates: { imageUrl?: string; content?: string } = {};
+            const existingHasHtml = existing.content && /<\w+[^>]*>/.test(existing.content);
+            const newHasHtml = item.content && /<\w+[^>]*>/.test(item.content);
+
+            if (!existingHasHtml && newHasHtml) updates.content = item.content;
             if (!existing.imageUrl && item.imageUrl) updates.imageUrl = item.imageUrl;
-            if (!existing.content && item.content) updates.content = item.content;
+
             if (updates.imageUrl || updates.content) {
               await db.article.update({ where: { id: existing.id }, data: updates });
             }
