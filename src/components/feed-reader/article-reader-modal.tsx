@@ -93,6 +93,16 @@ export function ArticleReaderModal({
   const hasContent =
     selectedArticle.content && selectedArticle.content !== selectedArticle.summary;
 
+  // Avoid showing the same image twice: skip the standalone image if it's
+  // already embedded inside the article content (e.g. Reddit transformed feeds)
+  const imageAlreadyInContent =
+    hasContent &&
+    selectedArticle.imageUrl &&
+    selectedArticle.content!.includes(selectedArticle.imageUrl);
+
+  const showStandaloneImage =
+    selectedArticle.imageUrl && !imageAlreadyInContent;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -196,7 +206,7 @@ export function ArticleReaderModal({
               )}
             </div>
 
-            {selectedArticle.imageUrl && (
+            {showStandaloneImage && (
               <img
                 src={selectedArticle.imageUrl}
                 alt=""
