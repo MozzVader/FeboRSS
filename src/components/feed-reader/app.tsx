@@ -3,17 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAppStore } from "@/store/app";
 import { FeedSidebar } from "@/components/feed-reader/feed-sidebar";
-import { ArticleList } from "@/components/feed-reader/article-list";
-import { ArticleReader } from "@/components/feed-reader/article-reader";
+import { ArticleCards } from "@/components/feed-reader/article-cards";
+import { ArticleReaderModal } from "@/components/feed-reader/article-reader-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import {
   Moon,
   Sun,
   Search,
-  Rss,
   Menu,
   RefreshCw,
   Loader2,
@@ -40,6 +38,7 @@ export default function FeedReaderApp() {
     setCategories,
     setSearch,
     setIsRefreshing,
+    selectArticle,
   } = useAppStore();
 
   useEffect(() => {
@@ -88,7 +87,7 @@ export default function FeedReaderApp() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [setFeeds, setIsRefreshing, toast]);
+  }, [setFeeds, setCategories, setIsRefreshing, toast]);
 
   const handleRefreshFeed = useCallback(async () => {
     if (!selectedFeedId) return;
@@ -206,7 +205,7 @@ export default function FeedReaderApp() {
               onClick={handleRefreshFeed}
               title="Actualizar feed"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
           )}
 
@@ -228,7 +227,7 @@ export default function FeedReaderApp() {
         </div>
       </header>
 
-      {/* Main content */}
+      {/* Main content: sidebar + cards */}
       <div className="flex-1 flex overflow-hidden">
         {/* Desktop sidebar */}
         <aside className="hidden md:block w-64 lg:w-72 border-r shrink-0">
@@ -238,34 +237,29 @@ export default function FeedReaderApp() {
           />
         </aside>
 
-        {/* Article list */}
-        <div
-          className={`w-full md:w-80 lg:w-96 border-r shrink-0 flex flex-col ${
-            selectedArticle ? "hidden md:flex" : "flex"
-          }`}
-        >
-          <div className="px-4 py-2.5 border-b flex items-center justify-between">
-            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        {/* Cards area */}
+        <main className="flex-1 min-w-0 flex flex-col">
+          <div className="px-6 py-3 border-b flex items-center justify-between">
+            <h2 className="text-sm font-medium text-muted-foreground">
               {getFilterLabel()}
             </h2>
             {isRefreshing && (
-              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
             )}
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
-            <ArticleList />
+            <ArticleCards />
           </div>
-        </div>
-
-        {/* Article reader */}
-        <div
-          className={`flex-1 min-w-0 ${
-            selectedArticle ? "flex" : "hidden md:flex"
-          }`}
-        >
-          <ArticleReader onBack={() => useAppStore.getState().selectArticle(null)} />
-        </div>
+        </main>
       </div>
+
+      {/* Article reader modal */}
+      <ArticleReaderModal
+        open={!!selectedArticle}
+        onOpenChange={(open) => {
+          if (!open) selectArticle(null);
+        }}
+      />
     </div>
   );
 }
