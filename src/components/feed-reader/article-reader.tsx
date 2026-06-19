@@ -63,7 +63,22 @@ export function ArticleReader({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedId: selectedArticle.feedId }),
       });
-      window.location.reload();
+      // Update local state without reloading the page
+      const store = useAppStore.getState();
+      // Mark current articles as read
+      store.setArticles(
+        store.articles.map((a) => ({ ...a, isRead: true })),
+        store.nextCursor,
+        0,
+        store.starredCount
+      );
+      // Reset unread count for the feed
+      store.updateFeedUnread(selectedArticle.feedId, -999);
+      // Also update in categories
+      const updatedFeeds = store.feeds.map((f) =>
+        f.id === selectedArticle.feedId ? { ...f, unreadCount: 0 } : f
+      );
+      store.setFeeds(updatedFeeds);
     } catch {
       // silent
     }

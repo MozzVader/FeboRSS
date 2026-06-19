@@ -70,6 +70,8 @@ interface AppState {
   updateArticleLocal: (id: string, data: Partial<ArticleItem>) => void;
   removeArticleLocal: (id: string) => void;
   updateFeedLocal: (id: string, data: Partial<FeedItem>) => void;
+  updateFeedUnread: (id: string, delta: number) => void;
+  decrementUnreadCount: (n: number) => void;
   setIsLoadingArticles: (v: boolean) => void;
   setIsRefreshing: (v: boolean) => void;
 }
@@ -148,6 +150,16 @@ export const useAppStore = create<AppState>((set) => ({
       feeds: state.feeds.map((f) =>
         f.id === id ? { ...f, ...data } : f
       ),
+    })),
+  updateFeedUnread: (id, delta) =>
+    set((state) => ({
+      feeds: state.feeds.map((f) =>
+        f.id === id ? { ...f, unreadCount: Math.max(0, f.unreadCount + delta) } : f
+      ),
+    })),
+  decrementUnreadCount: (n) =>
+    set((state) => ({
+      unreadCount: Math.max(0, state.unreadCount + n),
     })),
   setIsLoadingArticles: (v) => set({ isLoadingArticles: v }),
   setIsRefreshing: (v) => set({ isRefreshing: v }),
