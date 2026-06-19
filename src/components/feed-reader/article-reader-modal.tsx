@@ -90,18 +90,23 @@ export function ArticleReaderModal({
 
   if (!selectedArticle) return null;
 
-  const hasContent =
-    selectedArticle.content && selectedArticle.content !== selectedArticle.summary;
+  // Consider content as "real content" if it contains HTML tags (not just plain text)
+  const hasHtmlContent =
+    selectedArticle.content && /<\w+[^>]*>/.test(selectedArticle.content);
 
-  // Avoid showing the same image twice: skip the standalone image if it's
-  // already embedded inside the article content (e.g. Reddit transformed feeds)
+  // Detect Reddit feeds by checking the article's feed URL
+  const isReddit = /reddit\.com/i.test(selectedArticle.url);
+
+  // For Reddit: image is embedded inside content via transformRedditContent(),
+  // so we never show a standalone image (avoids duplication).
+  // For normal feeds: show standalone hero image only if it's not already in the content.
   const imageAlreadyInContent =
-    hasContent &&
+    hasHtmlContent &&
     selectedArticle.imageUrl &&
     selectedArticle.content!.includes(selectedArticle.imageUrl);
 
   const showStandaloneImage =
-    selectedArticle.imageUrl && !imageAlreadyInContent;
+    !isReddit && selectedArticle.imageUrl && !imageAlreadyInContent;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -190,7 +195,7 @@ export function ArticleReaderModal({
         </div>
 
         {/* Scrollable article content */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="max-w-3xl mx-auto px-6 py-6">
             <h1 className="text-xl md:text-2xl font-bold leading-tight tracking-tight mb-4">
               {selectedArticle.title}
@@ -219,7 +224,7 @@ export function ArticleReaderModal({
 
             <Separator className="mb-6" />
 
-            {hasContent ? (
+            {hasHtmlContent ? (
               <div
                 className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-img:rounded-lg"
                 dangerouslySetInnerHTML={{ __html: selectedArticle.content! }}
