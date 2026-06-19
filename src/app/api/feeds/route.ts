@@ -38,7 +38,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { url } = await request.json();
+    const { url, categoryId } = await request.json();
 
     if (!url) {
       return NextResponse.json({ error: "URL requerida" }, { status: 400 });
@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
         siteUrl: parsed.siteUrl,
         description: parsed.description,
         imageUrl: parsed.imageUrl,
+        categoryId: categoryId || null,
         articles: {
           create: parsed.items.slice(0, 50).map((item) => ({
             title: item.title,

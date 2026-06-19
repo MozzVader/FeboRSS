@@ -9,6 +9,7 @@ interface ArticleItem {
   feedImageUrl: string | null;
   title: string;
   url: string;
+  content: string | null;
   summary: string | null;
   author: string | null;
   imageUrl: string | null;

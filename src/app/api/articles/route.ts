@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
         feedImageUrl: a.feed.imageUrl,
         title: a.title,
         url: a.url,
+        content: a.content,
         summary: a.summary,
         author: a.author,
         imageUrl: a.imageUrl,

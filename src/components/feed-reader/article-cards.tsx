@@ -128,7 +128,7 @@ export function ArticleCards() {
         });
         updateArticleLocal(article.id, { isRead: true });
         useAppStore.getState().updateFeedUnread(article.feedId, -1);
-        useAppStore.getState().decrementUnreadCount(0);
+        useAppStore.getState().decrementUnreadCount(-1);
       } catch {
         // silent
       }
