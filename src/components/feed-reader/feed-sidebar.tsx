@@ -116,6 +116,16 @@ function SortableFeedItem({
         >
           <GripVertical className="h-3 w-3" />
         </span>
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onDelete(); } }}
+          className="opacity-0 group-hover:opacity-60 hover:!opacity-100 p-0.5 rounded hover:bg-destructive/10 cursor-pointer transition-opacity"
+          title="Eliminar feed"
+        >
+          <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+        </span>
         {feed.imageUrl ? (
           <img
             src={feed.imageUrl}
@@ -134,16 +144,6 @@ function SortableFeedItem({
             {feed.unreadCount}
           </span>
         )}
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/10 cursor-pointer"
-        title="Eliminar feed"
-      >
-        <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
       </button>
     </div>
   );
