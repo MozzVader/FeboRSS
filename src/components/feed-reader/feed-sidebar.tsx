@@ -131,7 +131,7 @@ function SortableFeedItem({
         <ContextMenuTrigger asChild>
           <button
             onClick={onSelect}
-            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer ${
+            className={`flex items-center gap-2 w-full px-2 py-[7px] rounded-md text-[13px] transition-colors cursor-pointer ${
               isSelected
                 ? "bg-accent text-accent-foreground font-medium"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -142,23 +142,23 @@ function SortableFeedItem({
               {...listeners}
               className="opacity-0 group-hover/sidebar:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 -ml-0.5"
             >
-              <GripVertical className="h-3 w-3" />
+              <GripVertical className="h-3.5 w-3.5" />
             </span>
             {feed.imageUrl ? (
               <img
                 src={feed.imageUrl}
                 alt=""
-                className="h-3.5 w-3.5 rounded-sm object-cover flex-shrink-0"
+                className="h-4 w-4 rounded-sm object-cover flex-shrink-0"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
             ) : (
-              <Rss className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
+              <Rss className="h-4 w-4 flex-shrink-0 text-orange-400" />
             )}
             <span className="flex-1 text-left truncate text-[13px]">{feed.title}</span>
             {feed.unreadCount > 0 && (
-              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+              <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
                 {feed.unreadCount}
               </span>
             )}
@@ -517,14 +517,14 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
     <div className="flex flex-col h-full bg-muted/30 group/sidebar">
       {/* Header */}
       <div className="p-4 flex items-center justify-between">
-        <h2 className="font-semibold text-base tracking-tight">Feeds</h2>
+        <h2 className="font-semibold text-[15px] tracking-tight">Feeds</h2>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRefreshAll} disabled={isRefreshing} title="Actualizar todos los feeds">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefreshAll} disabled={isRefreshing} title="Actualizar todos los feeds">
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
           <Dialog open={newCatOpen} onOpenChange={setNewCatOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Nueva categoria">
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Nueva categoria">
                 <FolderPlus className="h-3.5 w-3.5" />
               </Button>
             </DialogTrigger>
@@ -543,7 +543,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
           </Dialog>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Agregar feed">
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Agregar feed">
                 <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
@@ -588,7 +588,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
           <button
             key={key}
             onClick={() => { selectFeed(null); selectCategory(null); setFilter(key); }}
-            className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer ${
+            className={`flex items-center gap-2.5 px-3 py-[9px] rounded-md text-[13px] transition-colors cursor-pointer ${
               !selectedFeedId && !selectedCategoryId && filter === key
                 ? "bg-accent text-accent-foreground font-medium"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -663,11 +663,11 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
                               selectCategory(cat.id);
                             }}
                           >
-                            <ChevronRight className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                            <Folder className={`h-3.5 w-3.5 flex-shrink-0 ${isCatSelected ? "text-amber-500" : ""}`} />
+                            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                            <Folder className={`h-4 w-4 flex-shrink-0 ${isCatSelected ? "text-amber-500" : ""}`} />
                             <span className="flex-1 text-left truncate text-[13px]">{cat.name}</span>
                             {catTotalUnread > 0 && (
-                              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{catTotalUnread}</span>
+                              <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{catTotalUnread}</span>
                             )}
                           </div>
                         </CollapsibleTrigger>

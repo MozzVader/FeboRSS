@@ -1,0 +1,746 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useState, useCallback, useRef } from "react";
+     4→     4→import { useAppStore, type FeedItem, type FilterType } from "@/store/app";
+     5→     5→import { Button } from "@/components/ui/button";
+     6→     6→import { Input } from "@/components/ui/input";
+     7→     7→import { ScrollArea } from "@/components/ui/scroll-area";
+     8→     8→import { Separator } from "@/components/ui/separator";
+     9→     9→import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+    10→    10→import {
+    11→    11→  Dialog,
+    12→    12→  DialogContent,
+    13→    13→  DialogDescription,
+    14→    14→  DialogHeader,
+    15→    15→  DialogTitle,
+    16→    16→  DialogTrigger,
+    17→    17→} from "@/components/ui/dialog";
+    18→    18→import {
+    19→    19→  ContextMenu,
+    20→    20→  ContextMenuContent,
+    21→    21→  ContextMenuItem,
+    22→    22→  ContextMenuSeparator,
+    23→    23→  ContextMenuSub,
+    24→    24→  ContextMenuSubContent,
+    25→    25→  ContextMenuSubTrigger,
+    26→    26→  ContextMenuTrigger,
+    27→    27→} from "@/components/ui/context-menu";
+    28→    28→import {
+    29→    29→  Rss,
+    30→    30→  Plus,
+    31→    31→  RefreshCw,
+    32→    32→  Star,
+    33→    33→  Inbox,
+    34→    34→  BookOpen,
+    35→    35→  Loader2,
+    36→    36→  Newspaper,
+    37→    37→  FolderPlus,
+    38→    38→  Folder,
+    39→    39→  ChevronRight,
+    40→    40→  GripVertical,
+    41→    41→  Pencil,
+    42→    42→  Trash2,
+    43→    43→  FolderInput,
+    44→    44→  ArrowRightFromLine,
+    45→    45→} from "lucide-react";
+    46→    46→import { useToast } from "@/hooks/use-toast";
+    47→    47→import {
+    48→    48→  DndContext,
+    49→    49→  closestCenter,
+    50→    50→  KeyboardSensor,
+    51→    51→  PointerSensor,
+    52→    52→  useSensor,
+    53→    53→  useSensors,
+    54→    54→  useDroppable,
+    55→    55→  type DragEndEvent,
+    56→    56→  type DragOverEvent,
+    57→    57→  DragOverlay,
+    58→    58→  type UniqueIdentifier,
+    59→    59→} from "@dnd-kit/core";
+    60→    60→import {
+    61→    61→  SortableContext,
+    62→    62→  useSortable,
+    63→    63→  verticalListSortingStrategy,
+    64→    64→} from "@dnd-kit/sortable";
+    65→    65→import { CSS } from "@dnd-kit/utilities";
+    66→    66→
+    67→    67→interface FeedSidebarProps {
+    68→    68→  onRefreshAll: () => Promise<void>;
+    69→    69→  isRefreshing: boolean;
+    70→    70→}
+    71→    71→
+    72→    72→/* ─── Drop indicator line ─── */
+    73→    73→function DropIndicator({ active, position }: { active: boolean; position: "top" | "bottom" }) {
+    74→    74→  if (!active) return null;
+    75→    75→  return (
+    76→    76→    <div className={`h-0.5 bg-primary rounded-full mx-1 transition-all ${position === "top" ? "mb-0.5" : "mt-0.5"}`} />
+    77→    77→  );
+    78→    78→}
+    79→    79→
+    80→    80→/* ─── Droppable category zone ─── */
+    81→    81→function DroppableCategoryZone({
+    82→    82→  id,
+    83→    83→  children,
+    84→    84→}: {
+    85→    85→  id: string;
+    86→    86→  children: React.ReactNode;
+    87→    87→}) {
+    88→    88→  const { setNodeRef, isOver } = useDroppable({ id, data: { type: "category" } });
+    89→    89→  return (
+    90→    90→    <div
+    91→    91→      ref={setNodeRef}
+    92→    92→      className={`rounded-md transition-colors ${isOver ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
+    93→    93→    >
+    94→    94→      {children}
+    95→    95→    </div>
+    96→    96→  );
+    97→    97→}
+    98→    98→
+    99→    99→/* ─── Sortable feed item (clean — no action buttons) ─── */
+   100→   100→function SortableFeedItem({
+   101→   101→  feed,
+   102→   102→  isSelected,
+   103→   103→  onSelect,
+   104→   104→  onContextMenuActions,
+   105→   105→  showDropAbove,
+   106→   106→  showDropBelow,
+   107→   107→}: {
+   108→   108→  feed: FeedItem;
+   109→   109→  isSelected: boolean;
+   110→   110→  onSelect: () => void;
+   111→   111→  onContextMenuActions: {
+   112→   112→    onDelete: () => void;
+   113→   113→    onMoveToCategory: (catId: string | null) => void;
+   114→   114→  };
+   115→   115→  showDropAbove: boolean;
+   116→   116→  showDropBelow: boolean;
+   117→   117→}) {
+   118→   118→  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+   119→   119→    useSortable({ id: feed.id });
+   120→   120→
+   121→   121→  const style = {
+   122→   122→    transform: CSS.Transform.toString(transform),
+   123→   123→    transition,
+   124→   124→    opacity: isDragging ? 0.3 : 1,
+   125→   125→  };
+   126→   126→
+   127→   127→  return (
+   128→   128→    <div ref={setNodeRef} style={style}>
+   129→   129→      <DropIndicator active={showDropAbove} position="top" />
+   130→   130→      <ContextMenu>
+   131→   131→        <ContextMenuTrigger asChild>
+   132→   132→          <button
+   133→   133→            onClick={onSelect}
+   134→   134→            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer ${
+   135→   135→              isSelected
+   136→   136→                ? "bg-accent text-accent-foreground font-medium"
+   137→   137→                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+   138→   138→            }`}
+   139→   139→          >
+   140→   140→            <span
+   141→   141→              {...attributes}
+   142→   142→              {...listeners}
+   143→   143→              className="opacity-0 group-hover/sidebar:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 -ml-0.5"
+   144→   144→            >
+   145→   145→              <GripVertical className="h-3 w-3" />
+   146→   146→            </span>
+   147→   147→            {feed.imageUrl ? (
+   148→   148→              <img
+   149→   149→                src={feed.imageUrl}
+   150→   150→                alt=""
+   151→   151→                className="h-3.5 w-3.5 rounded-sm object-cover flex-shrink-0"
+   152→   152→                onError={(e) => {
+   153→   153→                  (e.target as HTMLImageElement).style.display = "none";
+   154→   154→                }}
+   155→   155→              />
+   156→   156→            ) : (
+   157→   157→              <Rss className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
+   158→   158→            )}
+   159→   159→            <span className="flex-1 text-left truncate text-[13px]">{feed.title}</span>
+   160→   160→            {feed.unreadCount > 0 && (
+   161→   161→              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+   162→   162→                {feed.unreadCount}
+   163→   163→              </span>
+   164→   164→            )}
+   165→   165→          </button>
+   166→   166→        </ContextMenuTrigger>
+   167→   167→        <ContextMenuContent>
+   168→   168→          <ContextMenuItem
+   169→   169→            onClick={() => onContextMenuActions.onMoveToCategory(null)}
+   170→   170→            className="gap-2"
+   171→   171→          >
+   172→   172→            <ArrowRightFromLine className="h-4 w-4" />
+   173→   173→            Quitar de categoria
+   174→   174→          </ContextMenuItem>
+   175→   175→          <ContextMenuSub>
+   176→   176→            <ContextMenuSubTrigger className="gap-2">
+   177→   177→              <FolderInput className="h-4 w-4" />
+   178→   178→              Mover a categoria
+   179→   179→            </ContextMenuSubTrigger>
+   180→   180→            <ContextMenuSubContent>
+   181→   181→              <FeedCategoryMenuItems
+   182→   182→                currentCategoryId={feed.categoryId}
+   183→   183→                onMove={onContextMenuActions.onMoveToCategory}
+   184→   184→              />
+   185→   185→            </ContextMenuSubContent>
+   186→   186→          </ContextMenuSub>
+   187→   187→          <ContextMenuSeparator />
+   188→   188→          <ContextMenuItem
+   189→   189→            onClick={onContextMenuActions.onDelete}
+   190→   190→            className="gap-2 text-destructive focus:text-destructive"
+   191→   191→          >
+   192→   192→            <Trash2 className="h-4 w-4" />
+   193→   193→            Eliminar feed
+   194→   194→          </ContextMenuItem>
+   195→   195→        </ContextMenuContent>
+   196→   196→      </ContextMenu>
+   197→   197→      <DropIndicator active={showDropBelow} position="bottom" />
+   198→   198→    </div>
+   199→   199→  );
+   200→   200→}
+   201→   201→
+   202→   202→/* ─── Helper: list categories as context menu items ─── */
+   203→   203→function FeedCategoryMenuItems({
+   204→   204→  currentCategoryId,
+   205→   205→  onMove,
+   206→   206→}: {
+   207→   207→  currentCategoryId: string | null;
+   208→   208→  onMove: (catId: string) => void;
+   209→   209→}) {
+   210→   210→  const { categories } = useAppStore();
+   211→   211→  return (
+   212→   212→    <>
+   213→   213→      {categories.map((cat) => (
+   214→   214→        <ContextMenuItem
+   215→   215→          key={cat.id}
+   216→   216→          onClick={() => onMove(cat.id)}
+   217→   217→          disabled={cat.id === currentCategoryId}
+   218→   218→          className="gap-2"
+   219→   219→        >
+   220→   220→          <Folder className="h-4 w-4" />
+   221→   221→          {cat.name}
+   222→   222→          {cat.id === currentCategoryId && (
+   223→   223→            <span className="ml-auto text-xs text-muted-foreground">actual</span>
+   224→   224→          )}
+   225→   225→        </ContextMenuItem>
+   226→   226→      ))}
+   227→   227→      {categories.length === 0 && (
+   228→   228→        <div className="px-2 py-1.5 text-xs text-muted-foreground italic">
+   229→   229→          No hay categorias
+   230→   230→        </div>
+   231→   231→      )}
+   232→   232→    </>
+   233→   233→  );
+   234→   234→}
+   235→   235→
+   236→   236→/* ─── Main sidebar ─── */
+   237→   237→export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
+   238→   238→  const [addUrl, setAddUrl] = useState("");
+   239→   239→  const [addOpen, setAddOpen] = useState(false);
+   240→   240→  const [addLoading, setAddLoading] = useState(false);
+   241→   241→  const [addCategoryId, setAddCategoryId] = useState<string | null>(null);
+   242→   242→  const [newCatName, setNewCatName] = useState("");
+   243→   243→  const [newCatOpen, setNewCatOpen] = useState(false);
+   244→   244→  const [newCatLoading, setNewCatLoading] = useState(false);
+   245→   245→  const [renameCatId, setRenameCatId] = useState<string | null>(null);
+   246→   246→  const [renameCatName, setRenameCatName] = useState("");
+   247→   247→  const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(null);
+   248→   248→  const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
+   249→   249→
+   250→   250→  const {
+   251→   251→    feeds,
+   252→   252→    categories,
+   253→   253→    selectedFeedId,
+   254→   254→    selectedCategoryId,
+   255→   255→    filter,
+   256→   256→    expandedCategories,
+   257→   257→    selectFeed,
+   258→   258→    selectCategory,
+   259→   259→    setFilter,
+   260→   260→    setFeeds,
+   261→   261→    setCategories,
+   262→   262→    addCategory,
+   263→   263→    updateCategory,
+   264→   264→    removeCategory,
+   265→   265→    toggleCategory,
+   266→   266→    unreadCount,
+   267→   267→    starredCount,
+   268→   268→  } = useAppStore();
+   269→   269→
+   270→   270→  const { toast } = useToast();
+   271→   271→
+   272→   272→  const sensors = useSensors(
+   273→   273→    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+   274→   274→    useSensor(KeyboardSensor)
+   275→   275→  );
+   276→   276→
+   277→   277→  const uncategorizedFeeds = feeds.filter((f) => !f.categoryId);
+   278→   278→
+   279→   279→  /* ── Handlers ── */
+   280→   280→
+   281→   281→  const handleAddFeed = async () => {
+   282→   282→    if (!addUrl.trim()) return;
+   283→   283→    setAddLoading(true);
+   284→   284→    try {
+   285→   285→      const res = await fetch("/api/feeds", {
+   286→   286→        method: "POST",
+   287→   287→        headers: { "Content-Type": "application/json" },
+   288→   288→        body: JSON.stringify({ url: addUrl.trim(), categoryId: addCategoryId }),
+   289→   289→      });
+   290→   290→      const data = await res.json();
+   291→   291→      if (!res.ok) throw new Error(data.error || "Error al agregar el feed");
+   292→   292→      toast({ title: "Feed agregado", description: `"${data.title}" se agrego correctamente` });
+   293→   293→      setAddUrl("");
+   294→   294→      setAddOpen(false);
+   295→   295→      window.location.reload();
+   296→   296→    } catch (err: unknown) {
+   297→   297→      const message = err instanceof Error ? err.message : "Error desconocido";
+   298→   298→      toast({ title: "Error", description: message, variant: "destructive" });
+   299→   299→    } finally {
+   300→   300→      setAddLoading(false);
+   301→   301→    }
+   302→   302→  };
+   303→   303→
+   304→   304→  const handleDeleteFeed = async (id: string) => {
+   305→   305→    try {
+   306→   306→      const res = await fetch("/api/feeds", {
+   307→   307→        method: "DELETE",
+   308→   308→        headers: { "Content-Type": "application/json" },
+   309→   309→        body: JSON.stringify({ id }),
+   310→   310→      });
+   311→   311→      if (!res.ok) throw new Error();
+   312→   312→      if (selectedFeedId === id) selectFeed(null);
+   313→   313→      toast({ title: "Feed eliminado" });
+   314→   314→      window.location.reload();
+   315→   315→    } catch {
+   316→   316→      toast({ title: "Error", description: "No se pudo eliminar el feed", variant: "destructive" });
+   317→   317→    }
+   318→   318→  };
+   319→   319→
+   320→   320→  const handleMoveFeedToCategory = async (feedId: string, categoryId: string | null) => {
+   321→   321→    try {
+   322→   322→      const feed = feeds.find((f) => f.id === feedId);
+   323→   323→      if (!feed || feed.categoryId === categoryId) return;
+   324→   324→
+   325→   325→      const updatedFeed = { ...feed, categoryId };
+   326→   326→      // Simple move: update just this feed
+   327→   327→      await fetch("/api/feeds/move", {
+   328→   328→        method: "PATCH",
+   329→   329→        headers: { "Content-Type": "application/json" },
+   330→   330→        body: JSON.stringify({ feeds: [{ id: feedId, categoryId, position: feed.position }] }),
+   331→   331→      });
+   332→   332→
+   333→   333→      toast({
+   334→   334→        title: categoryId ? "Feed movido a categoria" : "Feed sin categoria",
+   335→   335→      });
+   336→   336→
+   337→   337→      // Reload feeds and categories
+   338→   338→      const feedsRes = await fetch("/api/feeds");
+   339→   339→      const feedsData = await feedsRes.json();
+   340→   340→      setFeeds(feedsData);
+   341→   341→
+   342→   342→      const catsRes = await fetch("/api/categories");
+   343→   343→      const catsData = await catsRes.json();
+   344→   344→      setCategories(catsData);
+   345→   345→    } catch {
+   346→   346→      toast({ title: "Error al mover feed", variant: "destructive" });
+   347→   347→    }
+   348→   348→  };
+   349→   349→
+   350→   350→  const handleCreateCategory = async () => {
+   351→   351→    if (!newCatName.trim()) return;
+   352→   352→    setNewCatLoading(true);
+   353→   353→    try {
+   354→   354→      const res = await fetch("/api/categories", {
+   355→   355→        method: "POST",
+   356→   356→        headers: { "Content-Type": "application/json" },
+   357→   357→        body: JSON.stringify({ name: newCatName.trim() }),
+   358→   358→      });
+   359→   359→      const data = await res.json();
+   360→   360→      if (!res.ok) throw new Error(data.error);
+   361→   361→      addCategory({ ...data, feeds: [] });
+   362→   362→      setNewCatName("");
+   363→   363→      setNewCatOpen(false);
+   364→   364→    } catch (err: unknown) {
+   365→   365→      const message = err instanceof Error ? err.message : "Error desconocido";
+   366→   366→      toast({ title: "Error", description: message, variant: "destructive" });
+   367→   367→    } finally {
+   368→   368→      setNewCatLoading(false);
+   369→   369→    }
+   370→   370→  };
+   371→   371→
+   372→   372→  const handleRenameCategory = async (id: string) => {
+   373→   373→    if (!renameCatName.trim()) return;
+   374→   374→    try {
+   375→   375→      const res = await fetch("/api/categories", {
+   376→   376→        method: "PATCH",
+   377→   377→        headers: { "Content-Type": "application/json" },
+   378→   378→        body: JSON.stringify({ id, name: renameCatName.trim() }),
+   379→   379→      });
+   380→   380→      if (!res.ok) throw new Error();
+   381→   381→      updateCategory(id, { name: renameCatName.trim() });
+   382→   382→      setRenameCatId(null);
+   383→   383→    } catch {
+   384→   384→      toast({ title: "Error al renombrar", variant: "destructive" });
+   385→   385→    }
+   386→   386→  };
+   387→   387→
+   388→   388→  const handleDeleteCategory = async (id: string) => {
+   389→   389→    try {
+   390→   390→      const res = await fetch("/api/categories", {
+   391→   391→        method: "DELETE",
+   392→   392→        headers: { "Content-Type": "application/json" },
+   393→   393→        body: JSON.stringify({ id }),
+   394→   394→      });
+   395→   395→      if (!res.ok) throw new Error();
+   396→   396→      removeCategory(id);
+   397→   397→      toast({ title: "Categoria eliminada" });
+   398→   398→      window.location.reload();
+   399→   399→    } catch {
+   400→   400→      toast({ title: "Error al eliminar", variant: "destructive" });
+   401→   401→    }
+   402→   402→  };
+   403→   403→
+   404→   404→  /* ── DnD ── */
+   405→   405→
+   406→   406→  const handleDragOver = useCallback((event: DragOverEvent) => {
+   407→   407→    setOverId(event.over?.id ?? null);
+   408→   408→  }, []);
+   409→   409→
+   410→   410→  const handleDragEnd = useCallback(
+   411→   411→    async (event: DragEndEvent) => {
+   412→   412→      const { active, over } = event;
+   413→   413→      setActiveDragId(null);
+   414→   414→      setOverId(null);
+   415→   415→      if (!over || active.id === over.id) return;
+   416→   416→
+   417→   417→      const activeFeed = feeds.find((f) => f.id === active.id);
+   418→   418→      if (!activeFeed) return;
+   419→   419→
+   420→   420→      let targetCategoryId: string | null = null;
+   421→   421→
+   422→   422→      const overCategory = categories.find((c) => c.id === over.id);
+   423→   423→      if (overCategory) {
+   424→   424→        targetCategoryId = overCategory.id;
+   425→   425→      } else if (over.id === "uncategorized") {
+   426→   426→        targetCategoryId = null;
+   427→   427→      } else {
+   428→   428→        const overFeed = feeds.find((f) => f.id === over.id);
+   429→   429→        if (overFeed) targetCategoryId = overFeed.categoryId;
+   430→   430→      }
+   431→   431→
+   432→   432→      const feedsWithoutActive = feeds.filter((f) => f.id !== active.id);
+   433→   433→      let newFeeds: FeedItem[];
+   434→   434→
+   435→   435→      if (targetCategoryId === null) {
+   436→   436→        newFeeds = [
+   437→   437→          ...feedsWithoutActive.filter((f) => !f.categoryId),
+   438→   438→          { ...activeFeed, categoryId: null },
+   439→   439→        ];
+   440→   440→        newFeeds = [...newFeeds, ...feedsWithoutActive.filter((f) => !!f.categoryId)];
+   441→   441→      } else {
+   442→   442→        const catFeeds = feedsWithoutActive.filter((f) => f.categoryId === targetCategoryId);
+   443→   443→        const overIdx = catFeeds.findIndex((f) => f.id === over.id);
+   444→   444→        const insertIdx = overIdx >= 0 ? overIdx : catFeeds.length;
+   445→   445→        catFeeds.splice(insertIdx, 0, { ...activeFeed, categoryId: targetCategoryId });
+   446→   446→        newFeeds = [
+   447→   447→          ...feedsWithoutActive.filter((f) => f.categoryId !== targetCategoryId && f.categoryId !== activeFeed.categoryId),
+   448→   448→          ...catFeeds,
+   449→   449→        ];
+   450→   450→        const origCatRemain = feedsWithoutActive.filter((f) => f.categoryId === activeFeed.categoryId && f.categoryId !== targetCategoryId);
+   451→   451→        if (activeFeed.categoryId !== targetCategoryId) {
+   452→   452→          newFeeds = [...newFeeds.filter((f) => f.categoryId !== activeFeed.categoryId), ...origCatRemain];
+   453→   453→        }
+   454→   454→      }
+   455→   455→
+   456→   456→      const moveData = newFeeds.map((f, i) => ({
+   457→   457→        id: f.id,
+   458→   458→        categoryId: f.categoryId,
+   459→   459→        position: i,
+   460→   460→      }));
+   461→   461→
+   462→   462→      try {
+   463→   463→        await fetch("/api/feeds/move", {
+   464→   464→          method: "PATCH",
+   465→   465→          headers: { "Content-Type": "application/json" },
+   466→   466→          body: JSON.stringify({ feeds: moveData }),
+   467→   467→        });
+   468→   468→      } catch {
+   469→   469→        // silent
+   470→   470→      }
+   471→   471→
+   472→   472→      const feedsRes = await fetch("/api/feeds");
+   473→   473→      const feedsData = await feedsRes.json();
+   474→   474→      setFeeds(feedsData);
+   475→   475→
+   476→   476→      const catsRes = await fetch("/api/categories");
+   477→   477→      const catsData = await catsRes.json();
+   478→   478→      setCategories(catsData);
+   479→   479→    },
+   480→   480→    [feeds, categories, setFeeds, setCategories]
+   481→   481→  );
+   482→   482→
+   483→   483→  /* ── Render helpers ── */
+   484→   484→
+   485→   485→  const filterItems: { key: FilterType; label: string; icon: React.ReactNode; count?: number }[] = [
+   486→   486→    { key: "all", label: "Todos", icon: <Newspaper className="h-4 w-4" /> },
+   487→   487→    { key: "unread", label: "No leidos", icon: <Inbox className="h-4 w-4" />, count: unreadCount },
+   488→   488→    { key: "starred", label: "Favoritos", icon: <Star className="h-4 w-4" />, count: starredCount },
+   489→   489→  ];
+   490→   490→
+   491→   491→  const dragOverlayFeed = activeDragId ? feeds.find((f) => f.id === activeDragId) : null;
+   492→   492→
+   493→   493→  const renderFeedItem = (feed: FeedItem) => {
+   494→   494→    const isOverThis = overId === feed.id && activeDragId !== feed.id;
+   495→   495→    const activeFeedData = activeDragId ? feeds.find((f) => f.id === activeDragId) : null;
+   496→   496→    // Show drop above if dragged item was previously after this item in the list
+   497→   497→    const showAbove = isOverThis && activeFeedData && activeFeedData.categoryId === feed.categoryId;
+   498→   498→    const showBelow = false; // The DnD overlay handles the visual
+   499→   499→
+   500→   500→    return (
+   501→   501→      <SortableFeedItem
+   502→   502→        key={feed.id}
+   503→   503→        feed={feed}
+   504→   504→        isSelected={selectedFeedId === feed.id}
+   505→   505→        onSelect={() => { setFilter("all"); selectFeed(feed.id); }}
+   506→   506→        onContextMenuActions={{
+   507→   507→          onDelete: () => handleDeleteFeed(feed.id),
+   508→   508→          onMoveToCategory: (catId) => handleMoveFeedToCategory(feed.id, catId),
+   509→   509→        }}
+   510→   510→        showDropAbove={showAbove}
+   511→   511→        showDropBelow={showBelow}
+   512→   512→      />
+   513→   513→    );
+   514→   514→  };
+   515→   515→
+   516→   516→  return (
+   517→   517→    <div className="flex flex-col h-full bg-muted/30 group/sidebar">
+   518→   518→      {/* Header */}
+   519→   519→      <div className="p-4 flex items-center justify-between">
+   520→   520→        <h2 className="font-semibold text-base tracking-tight">Feeds</h2>
+   521→   521→        <div className="flex items-center gap-1">
+   522→   522→          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRefreshAll} disabled={isRefreshing} title="Actualizar todos los feeds">
+   523→   523→            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+   524→   524→          </Button>
+   525→   525→          <Dialog open={newCatOpen} onOpenChange={setNewCatOpen}>
+   526→   526→            <DialogTrigger asChild>
+   527→   527→              <Button variant="ghost" size="icon" className="h-7 w-7" title="Nueva categoria">
+   528→   528→                <FolderPlus className="h-3.5 w-3.5" />
+   529→   529→              </Button>
+   530→   530→            </DialogTrigger>
+   531→   531→            <DialogContent className="sm:max-w-sm">
+   532→   532→              <DialogHeader>
+   533→   533→                <DialogTitle>Nueva categoria</DialogTitle>
+   534→   534→                <DialogDescription>Crea una carpeta para organizar tus feeds.</DialogDescription>
+   535→   535→              </DialogHeader>
+   536→   536→              <div className="flex gap-2 mt-2">
+   537→   537→                <Input placeholder="Nombre de la categoria" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCreateCategory()} disabled={newCatLoading} />
+   538→   538→                <Button onClick={handleCreateCategory} disabled={newCatLoading || !newCatName.trim()}>
+   539→   539→                  {newCatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+   540→   540→                </Button>
+   541→   541→              </div>
+   542→   542→            </DialogContent>
+   543→   543→          </Dialog>
+   544→   544→          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+   545→   545→            <DialogTrigger asChild>
+   546→   546→              <Button variant="ghost" size="icon" className="h-7 w-7" title="Agregar feed">
+   547→   547→                <Plus className="h-4 w-4" />
+   548→   548→              </Button>
+   549→   549→            </DialogTrigger>
+   550→   550→            <DialogContent className="sm:max-w-md">
+   551→   551→              <DialogHeader>
+   552→   552→                <DialogTitle>Agregar Feed RSS</DialogTitle>
+   553→   553→                <DialogDescription>Ingresa la URL de un feed RSS o Atom.</DialogDescription>
+   554→   554→              </DialogHeader>
+   555→   555→              <div className="flex gap-2 mt-2">
+   556→   556→                <Input placeholder="https://ejemplo.com/feed.xml" value={addUrl} onChange={(e) => setAddUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddFeed()} disabled={addLoading} />
+   557→   557→                <Button onClick={handleAddFeed} disabled={addLoading || !addUrl.trim()}>
+   558→   558→                  {addLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+   559→   559→                </Button>
+   560→   560→              </div>
+   561→   561→              <div className="text-xs text-muted-foreground mt-3 space-y-1">
+   562→   562→                <p className="font-medium">Ejemplos populares:</p>
+   563→   563→                <button className="block text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => setAddUrl("https://xkcd.com/rss.xml")}>xkcd</button>
+   564→   564→                <button className="block text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => setAddUrl("https://hnrss.org/frontpage")}>Hacker News</button>
+   565→   565→                <button className="block text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => setAddUrl("https://www.reddit.com/r/programming/.rss")}>r/programming</button>
+   566→   566→              </div>
+   567→   567→              {categories.length > 0 && (
+   568→   568→                <div className="mt-3">
+   569→   569→                  <p className="text-xs font-medium text-muted-foreground mb-1">Agregar a categoria:</p>
+   570→   570→                  <div className="flex gap-1 flex-wrap">
+   571→   571→                    <button onClick={() => setAddCategoryId(null)} className={`text-[11px] px-2 py-0.5 rounded-full border cursor-pointer transition-colors ${addCategoryId === null ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-accent"}`}>Sin categoria</button>
+   572→   572→                    {categories.map((c) => (
+   573→   573→                      <button key={c.id} onClick={() => setAddCategoryId(c.id)} className={`text-[11px] px-2 py-0.5 rounded-full border cursor-pointer transition-colors ${addCategoryId === c.id ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-accent"}`}>{c.name}</button>
+   574→   574→                    ))}
+   575→   575→                  </div>
+   576→   576→                </div>
+   577→   577→              )}
+   578→   578→            </DialogContent>
+   579→   579→          </Dialog>
+   580→   580→        </div>
+   581→   581→      </div>
+   582→   582→
+   583→   583→      <Separator />
+   584→   584→
+   585→   585→      {/* Filter tabs */}
+   586→   586→      <div className="p-2 flex flex-col gap-0.5">
+   587→   587→        {filterItems.map(({ key, label, icon, count }) => (
+   588→   588→          <button
+   589→   589→            key={key}
+   590→   590→            onClick={() => { selectFeed(null); selectCategory(null); setFilter(key); }}
+   591→   591→            className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer ${
+   592→   592→              !selectedFeedId && !selectedCategoryId && filter === key
+   593→   593→                ? "bg-accent text-accent-foreground font-medium"
+   594→   594→                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+   595→   595→            }`}
+   596→   596→          >
+   597→   597→            {icon}
+   598→   598→            <span className="flex-1 text-left">{label}</span>
+   599→   599→            {count !== undefined && count > 0 && (
+   600→   600→              <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{count}</span>
+   601→   601→            )}
+   602→   602→          </button>
+   603→   603→        ))}
+   604→   604→      </div>
+   605→   605→
+   606→   606→      <Separator />
+   607→   607→
+   608→   608→      {/* Feeds list with DnD */}
+   609→   609→      <ScrollArea className="flex-1 px-2 py-1">
+   610→   610→        <DndContext
+   611→   611→          sensors={sensors}
+   612→   612→          collisionDetection={closestCenter}
+   613→   613→          onDragStart={({ active }) => setActiveDragId(active.id)}
+   614→   614→          onDragOver={handleDragOver}
+   615→   615→          onDragEnd={handleDragEnd}
+   616→   616→        >
+   617→   617→          <div className="flex flex-col gap-0.5 pb-4">
+   618→   618→            {feeds.length === 0 && categories.length === 0 && (
+   619→   619→              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+   620→   620→                <BookOpen className="h-8 w-8 text-muted-foreground/40 mb-2" />
+   621→   621→                <p className="text-xs text-muted-foreground">No hay feeds todavia.<br />Agrega uno con el boton +</p>
+   622→   622→              </div>
+   623→   623→            )}
+   624→   624→
+   625→   625→            {/* Uncategorized feeds FIRST */}
+   626→   626→            <DroppableCategoryZone id="uncategorized">
+   627→   627→              {uncategorizedFeeds.length > 0 && categories.length > 0 && (
+   628→   628→                <div className="px-2 pt-2 pb-1">
+   629→   629→                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">Sin categoria</span>
+   630→   630→                </div>
+   631→   631→              )}
+   632→   632→              <SortableContext items={uncategorizedFeeds.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+   633→   633→                {uncategorizedFeeds.map((feed) => renderFeedItem(feed))}
+   634→   634→              </SortableContext>
+   635→   635→            </DroppableCategoryZone>
+   636→   636→
+   637→   637→            {/* Categories AFTER uncategorized */}
+   638→   638→            {categories.map((cat) => {
+   639→   639→              const isExpanded = expandedCategories.has(cat.id);
+   640→   640→              const catTotalUnread = cat.feeds.reduce((sum, f) => sum + f.unreadCount, 0);
+   641→   641→              const isCatSelected = selectedCategoryId === cat.id && !selectedFeedId;
+   642→   642→
+   643→   643→              return (
+   644→   644→                <DroppableCategoryZone id={cat.id} key={cat.id}>
+   645→   645→                  <Collapsible
+   646→   646→                    open={isExpanded}
+   647→   647→                    onOpenChange={() => toggleCategory(cat.id)}
+   648→   648→                  >
+   649→   649→                    <ContextMenu>
+   650→   650→                      <ContextMenuTrigger asChild>
+   651→   651→                        <CollapsibleTrigger asChild>
+   652→   652→                          <div
+   653→   653→                            role="button"
+   654→   654→                            tabIndex={0}
+   655→   655→                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); } }}
+   656→   656→                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+   657→   657→                              isCatSelected
+   658→   658→                                ? "bg-accent text-accent-foreground font-medium"
+   659→   659→                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+   660→   660→                            }`}
+   661→   661→                            onClick={(e) => {
+   662→   662→                              if (e.detail === 0) return;
+   663→   663→                              selectCategory(cat.id);
+   664→   664→                            }}
+   665→   665→                          >
+   666→   666→                            <ChevronRight className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+   667→   667→                            <Folder className={`h-3.5 w-3.5 flex-shrink-0 ${isCatSelected ? "text-amber-500" : ""}`} />
+   668→   668→                            <span className="flex-1 text-left truncate text-[13px]">{cat.name}</span>
+   669→   669→                            {catTotalUnread > 0 && (
+   670→   670→                              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{catTotalUnread}</span>
+   671→   671→                            )}
+   672→   672→                          </div>
+   673→   673→                        </CollapsibleTrigger>
+   674→   674→                      </ContextMenuTrigger>
+   675→   675→                      <ContextMenuContent>
+   676→   676→                        <ContextMenuItem
+   677→   677→                          onClick={() => { setRenameCatId(cat.id); setRenameCatName(cat.name); }}
+   678→   678→                          className="gap-2"
+   679→   679→                        >
+   680→   680→                          <Pencil className="h-4 w-4" />
+   681→   681→                          Renombrar
+   682→   682→                        </ContextMenuItem>
+   683→   683→                        <ContextMenuSeparator />
+   684→   684→                        <ContextMenuItem
+   685→   685→                          onClick={() => handleDeleteCategory(cat.id)}
+   686→   686→                          className="gap-2 text-destructive focus:text-destructive"
+   687→   687→                        >
+   688→   688→                          <Trash2 className="h-4 w-4" />
+   689→   689→                          Eliminar categoria
+   690→   690→                        </ContextMenuItem>
+   691→   691→                      </ContextMenuContent>
+   692→   692→                    </ContextMenu>
+   693→   693→
+   694→   694→                  {/* Rename inline */}
+   695→   695→                  {renameCatId === cat.id && (
+   696→   696→                    <div className="flex items-center gap-1 px-2 py-1 ml-5">
+   697→   697→                      <Input
+   698→   698→                        autoFocus
+   699→   699→                        value={renameCatName}
+   700→   700→                        onChange={(e) => setRenameCatName(e.target.value)}
+   701→   701→                        onKeyDown={(e) => {
+   702→   702→                          if (e.key === "Enter") handleRenameCategory(cat.id);
+   703→   703→                          if (e.key === "Escape") setRenameCatId(null);
+   704→   704→                        }}
+   705→   705→                        className="h-6 text-xs"
+   706→   706→                      />
+   707→   707→                      <Button size="sm" className="h-6 px-2 text-xs" onClick={() => handleRenameCategory(cat.id)}>OK</Button>
+   708→   708→                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setRenameCatId(null)}>X</Button>
+   709→   709→                    </div>
+   710→   710→                  )}
+   711→   711→
+   712→   712→                    <CollapsibleContent>
+   713→   713→                      <div className="ml-4 pl-2 border-l border-border/50 mt-0.5 space-y-0.5">
+   714→   714→                        <SortableContext items={cat.feeds.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+   715→   715→                          {cat.feeds.map((feed) => renderFeedItem(feed))}
+   716→   716→                        </SortableContext>
+   717→   717→                        {cat.feeds.length === 0 && (
+   718→   718→                          <p className="text-[11px] text-muted-foreground/60 px-3 py-1 italic">Sin feeds — arrastra uno aca</p>
+   719→   719→                        )}
+   720→   720→                      </div>
+   721→   721→                    </CollapsibleContent>
+   722→   722→                  </Collapsible>
+   723→   723→                </DroppableCategoryZone>
+   724→   724→              );
+   725→   725→            })}
+   726→   726→          </div>
+   727→   727→
+   728→   728→          {/* Drag overlay */}
+   729→   729→          <DragOverlay>
+   730→   730→            {dragOverlayFeed ? (
+   731→   731→              <div className="flex items-center gap-2 px-3 py-2 bg-background border rounded-md shadow-lg text-sm max-w-[200px]">
+   732→   732→                <GripVertical className="h-3 w-3 text-muted-foreground" />
+   733→   733→                {dragOverlayFeed.imageUrl ? (
+   734→   734→                  <img src={dragOverlayFeed.imageUrl} alt="" className="h-3.5 w-3.5 rounded-sm object-cover" />
+   735→   735→                ) : (
+   736→   736→                  <Rss className="h-3.5 w-3.5 text-orange-400" />
+   737→   737→                )}
+   738→   738→                <span className="truncate">{dragOverlayFeed.title}</span>
+   739→   739→              </div>
+   740→   740→            ) : null}
+   741→   741→          </DragOverlay>
+   742→   742→        </DndContext>
+   743→   743→      </ScrollArea>
+   744→   744→    </div>
+   745→   745→  );
+   746→   746→}

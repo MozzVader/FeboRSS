@@ -158,8 +158,8 @@ export default function FeedReaderApp() {
             </SheetContent>
           </Sheet>
 
-          <img src="/logo.png" alt="Febo" className="h-6 w-6" />
-          <h1 className="text-base font-bold tracking-tight hidden sm:block">
+          <img src="/logo.png" alt="Febo" className="h-7 w-7" />
+          <h1 className="text-lg font-bold tracking-tight hidden sm:block">
             Febo <span className="font-light text-muted-foreground">RSS</span>
           </h1>
         </div>
