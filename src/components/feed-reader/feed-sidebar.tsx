@@ -25,6 +25,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { useMemo } from "react";
 import {
   Rss,
   Plus,
@@ -67,6 +68,27 @@ import { CSS } from "@dnd-kit/utilities";
 interface FeedSidebarProps {
   onRefreshAll: () => Promise<void>;
   isRefreshing: boolean;
+}
+
+/* ─── Feed icon with fallback ─── */
+const brokenImageUrls = new Set<string>();
+
+function FeedIcon({ src, className }: { src: string | null | undefined; className?: string }) {
+  const broken = src ? brokenImageUrls.has(src) : true;
+  if (broken || !src) {
+    return <Rss className={className ?? "h-4 w-4 flex-shrink-0 text-orange-400"} />;
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className ?? "h-4 w-4 rounded-sm object-cover flex-shrink-0"}
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = "none";
+        brokenImageUrls.add(src!);
+      }}
+    />
+  );
 }
 
 /* ─── Drop indicator line ─── */
@@ -144,18 +166,7 @@ function SortableFeedItem({
             >
               <GripVertical className="h-3.5 w-3.5" />
             </span>
-            {feed.imageUrl ? (
-              <img
-                src={feed.imageUrl}
-                alt=""
-                className="h-4 w-4 rounded-sm object-cover flex-shrink-0"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : (
-              <Rss className="h-4 w-4 flex-shrink-0 text-orange-400" />
-            )}
+            <FeedIcon src={feed.imageUrl} />
             <span className="flex-1 text-left truncate text-[13px]">{feed.title}</span>
             {feed.unreadCount > 0 && (
               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
@@ -730,11 +741,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
             {dragOverlayFeed ? (
               <div className="flex items-center gap-2 px-3 py-2 bg-background border rounded-md shadow-lg text-sm max-w-[200px]">
                 <GripVertical className="h-3 w-3 text-muted-foreground" />
-                {dragOverlayFeed.imageUrl ? (
-                  <img src={dragOverlayFeed.imageUrl} alt="" className="h-3.5 w-3.5 rounded-sm object-cover" />
-                ) : (
-                  <Rss className="h-3.5 w-3.5 text-orange-400" />
-                )}
+                <FeedIcon src={dragOverlayFeed.imageUrl} className="h-3.5 w-3.5" />
                 <span className="truncate">{dragOverlayFeed.title}</span>
               </div>
             ) : null}
