@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { parseFeedUrl } from "@/lib/rss";
+import { parseFeedUrl, isRedditFeed } from "@/lib/rss";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
     const parsed = await parseFeedUrl(feed.url);
 
     let newCount = 0;
+    const reddit = isRedditFeed(feed.url);
+
     for (const item of parsed.items) {
       const existing = await db.article.findUnique({
         where: { feedId_url: { feedId, url: item.url } },
@@ -42,6 +44,14 @@ export async function POST(request: NextRequest) {
           },
         });
         newCount++;
+      } else if (reddit) {
+        // Reddit feeds: update existing articles missing imageUrl or content
+        const updates: { imageUrl?: string; content?: string } = {};
+        if (!existing.imageUrl && item.imageUrl) updates.imageUrl = item.imageUrl;
+        if (!existing.content && item.content) updates.content = item.content;
+        if (updates.imageUrl || updates.content) {
+          await db.article.update({ where: { id: existing.id }, data: updates });
+        }
       }
     }
 
