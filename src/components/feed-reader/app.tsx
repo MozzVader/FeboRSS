@@ -739,7 +739,7 @@ export default function FeedReaderApp() {
       {/* Main content: sidebar + cards */}
       <div className="flex-1 flex overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className="hidden md:block w-64 lg:w-72 border-r shrink-0">
+        <aside className="hidden md:block w-64 lg:w-72 border-r shrink-0 overflow-hidden">
           <FeedSidebar
             onRefreshAll={handleRefreshAll}
             isRefreshing={isRefreshing}
