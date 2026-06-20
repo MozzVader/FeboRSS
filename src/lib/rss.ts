@@ -76,13 +76,15 @@ function isRedditGallery(content?: string): boolean {
 }
 
 /**
- * Extract Reddit preview image URL from <img> tags (preview.redd.it).
+ * Extract Reddit preview image URL from <img> tags.
+ * Matches both preview.redd.it (Reddit-hosted) and external-preview.redd.it (thumbnails
+ * for external content like YouTube, redgifs, imgur, gfycat, etc.).
  * These are signed URLs with ?width=...&s=HASH — they MUST keep the params to work.
  */
 function extractRedditPreviewImg(content?: string): string | undefined {
   if (!content) return undefined;
   const match = content.match(
-    /<img[^>]+src=["'](https?:\/\/preview\.redd\.it\/[^"']+)["']/i
+    /<img[^>]+src=["'](https?:\/\/(?:external-)?preview\.redd\.it\/[^"']+)["']/i
   );
   return match ? match[1] : undefined;
 }
@@ -142,10 +144,9 @@ function transformRedditContent(content?: string): string | undefined {
   );
 
   // 2. Remove the Reddit table layout wrapper around the thumbnail
-  // The structure is: <table><tr><td><a href="..."><img src="preview.redd.it/..."></a></td><td>...submitted by...</td></tr></table>
-  // We want to keep the preview <img> but remove the table/link wrapper
+  // Works for both preview.redd.it and external-preview.redd.it
   result = result.replace(
-    /<table>\s*<tr>\s*<td>\s*<a\s[^>]*href=["'][^"']*["'][^>]*>\s*(<img[^>]*src=["']https?:\/\/preview\.redd\.it\/[^"']+["'][^>]*\/?>)\s*<\/a>\s*<\/td>\s*<td>.*?<\/td>\s*<\/tr>\s*<\/table>/gis,
+    /<table>\s*<tr>\s*<td>\s*<a\s[^>]*href=["'][^"']*["'][^>]*>\s*(<img[^>]*src=["']https?:\/\/(?:external-)?preview\.redd\.it\/[^"']+["'][^>]*\/?>)\s*<\/a>\s*<\/td>\s*<td>.*?<\/td>\s*<\/tr>\s*<\/table>/gis,
     '$1'
   );
 
@@ -159,6 +160,28 @@ function transformRedditContent(content?: string): string | undefined {
       `<a href="$1" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;padding:6px 14px;border-radius:6px;background:var(--accent);color:var(--accent-foreground);font-size:13px;text-decoration:none">Ver galería en Reddit →</a>`
     );
   }
+
+  // 4. For external links (redgifs, imgur, gfycat, youtube, etc.) that are NOT i.redd.it
+  //    and NOT gallery, convert [link] into a styled button that opens the external content.
+  //    These posts have an external-preview.redd.it thumbnail but the actual content
+  //    lives on the external site.
+  result = result.replace(
+    /<a\s[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>\[link\]<\/a>/gi,
+    (match, href: string) => {
+      // Skip if already handled (i.redd.it converted to img, gallery converted to button)
+      if (/i\.redd\.it/i.test(href)) return match;
+      if (/\/gallery\//i.test(href)) return match;
+
+      // Extract a short domain name for the button label
+      let domain = 'enlace externo';
+      try {
+        const urlObj = new URL(href);
+        domain = urlObj.hostname.replace('www.', '');
+      } catch { /* keep default */ }
+
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;padding:6px 14px;border-radius:6px;background:#333;color:#fff;font-size:13px;text-decoration:none">Ver en ${domain} →</a>`;
+    }
+  );
 
   return result;
 }
