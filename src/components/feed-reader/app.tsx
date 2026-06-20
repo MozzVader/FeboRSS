@@ -729,9 +729,20 @@ export default function FeedReaderApp() {
         {/* Cards area */}
         <main className="flex-1 min-w-0 flex flex-col">
           <div className="px-6 py-3 border-b flex items-center justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground">
-              {getFilterLabel()}
-            </h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-sm font-medium text-muted-foreground">
+                {getFilterLabel()}
+              </h2>
+              {selectedFeedId && (() => {
+                const feed = feeds.find((f) => f.id === selectedFeedId);
+                if (feed?.notifyEnabled) {
+                  return (
+                    <Bell className="h-3.5 w-3.5 text-blue-500" title="Notificaciones activadas" />
+                  );
+                }
+                return null;
+              })()}
+            </div>
             {isRefreshing && (
               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
             )}
