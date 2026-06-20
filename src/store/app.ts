@@ -25,6 +25,15 @@ function saveGlobalMute(muted: boolean) {
   } catch { /* ignore */ }
 }
 
+function loadViewMode(): "cards" | "compact" {
+  if (typeof window === "undefined") return "cards";
+  try {
+    const raw = localStorage.getItem("febo:viewMode");
+    if (raw === "compact") return "compact";
+  } catch { /* ignore */ }
+  return "cards";
+}
+
 function saveExpandedCategories(categories: Set<string>) {
   if (typeof window === "undefined") return;
   try {
@@ -92,6 +101,7 @@ interface AppState {
   isLoadingArticles: boolean;
   isRefreshing: boolean;
   globalMute: boolean;
+  viewMode: "cards" | "compact";
 
   setFeeds: (feeds: FeedItem[]) => void;
   setCategories: (categories: CategoryItem[]) => void;
@@ -116,6 +126,7 @@ interface AppState {
   setIsLoadingArticles: (v: boolean) => void;
   setIsRefreshing: (v: boolean) => void;
   toggleGlobalMute: () => void;
+  setViewMode: (mode: "cards" | "compact") => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -136,6 +147,7 @@ export const useAppStore = create<AppState>((set) => ({
   isLoadingArticles: false,
   isRefreshing: false,
   globalMute: loadGlobalMute(),
+  viewMode: loadViewMode(),
 
   setFeeds: (feeds) => set({ feeds }),
   setCategories: (categories) => set({ categories }),
@@ -216,5 +228,10 @@ export const useAppStore = create<AppState>((set) => ({
       const next = !state.globalMute;
       saveGlobalMute(next);
       return { globalMute: next };
+    }),
+  setViewMode: (mode) =>
+    set(() => {
+      try { localStorage.setItem("febo:viewMode", mode); } catch { /* ignore */ }
+      return { viewMode: mode };
     }),
 }));

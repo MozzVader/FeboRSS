@@ -21,6 +21,8 @@ import {
   Keyboard,
   Bell,
   BellOff,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -56,6 +58,7 @@ export default function FeedReaderApp() {
     selectedArticle,
     isRefreshing,
     globalMute,
+    viewMode,
     setFeeds,
     setCategories,
     setSearch,
@@ -63,6 +66,7 @@ export default function FeedReaderApp() {
     selectArticle,
     selectCategory,
     toggleGlobalMute,
+    setViewMode,
   } = useAppStore();
 
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -625,6 +629,22 @@ export default function FeedReaderApp() {
               title="Buscar"
             >
               <Search className="h-4 w-4" />
+            </Button>
+          )}
+
+          {mounted && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode(viewMode === "cards" ? "compact" : "cards")}
+              title={viewMode === "cards" ? "Vista compacta" : "Vista tarjetas"}
+            >
+              {viewMode === "cards" ? (
+                <List className="h-4 w-4" />
+              ) : (
+                <LayoutGrid className="h-4 w-4" />
+              )}
             </Button>
           )}
 

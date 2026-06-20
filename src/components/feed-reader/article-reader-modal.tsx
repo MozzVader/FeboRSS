@@ -21,6 +21,7 @@ import {
   Rss,
   CheckCheck,
   X,
+  Link2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -86,6 +87,26 @@ export function ArticleReaderModal({
     const idx = FONT_SIZES.indexOf(fontSize);
     const next = Math.max(0, Math.min(FONT_SIZES.length - 1, idx + delta));
     setFontSize(FONT_SIZES[next]);
+  };
+
+  const handleCopyLink = async () => {
+    if (!selectedArticle) return;
+    try {
+      await navigator.clipboard.writeText(selectedArticle.url);
+      toast({ title: "Link copiado al portapapeles" });
+    } catch {
+      try {
+        const input = document.createElement("textarea");
+        input.value = selectedArticle.url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+        toast({ title: "Link copiado al portapapeles" });
+      } catch {
+        toast({ title: "No se pudo copiar el link", variant: "destructive" });
+      }
+    }
   };
 
   const handleToggleStar = async () => {
@@ -228,6 +249,15 @@ export function ArticleReaderModal({
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </Button>
             </a>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleCopyLink}
+              title="Copiar link"
+            >
+              <Link2 className="h-4 w-4 text-muted-foreground" />
+            </Button>
             <Separator orientation="vertical" className="mx-1 h-4" />
             <Button
               variant="ghost"

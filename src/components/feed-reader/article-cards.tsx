@@ -12,7 +12,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Star, Clock, User, CheckCheck, Eye, EyeOff } from "lucide-react";
+import { Star, Clock, User, CheckCheck, Eye, EyeOff, Link2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -60,6 +60,17 @@ function CardSkeleton() {
   );
 }
 
+function CompactSkeleton() {
+  return (
+    <div className="px-4 py-2.5 flex items-center gap-3">
+      <Skeleton className="h-2 w-2 rounded-full" />
+      <Skeleton className="h-4 flex-1 max-w-[50%]" />
+      <Skeleton className="h-3 w-24" />
+      <Skeleton className="h-3 w-16" />
+    </div>
+  );
+}
+
 export function ArticleCards() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -76,6 +87,7 @@ export function ArticleCards() {
     nextCursor,
     isLoadingArticles,
     focusedArticleId,
+    viewMode,
     selectArticle,
     updateArticleLocal,
     appendArticles,
@@ -228,6 +240,26 @@ export function ArticleCards() {
     }
   };
 
+  const handleCopyLink = async (article: (typeof articles)[0]) => {
+    try {
+      await navigator.clipboard.writeText(article.url);
+      toast({ title: "Link copiado al portapapeles" });
+    } catch {
+      // Fallback for older browsers
+      try {
+        const input = document.createElement("textarea");
+        input.value = article.url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+        toast({ title: "Link copiado al portapapeles" });
+      } catch {
+        toast({ title: "No se pudo copiar el link", variant: "destructive" });
+      }
+    }
+  };
+
   const handleMarkFeedRead = async (feedId: string) => {
     try {
       await fetch("/api/articles/mark-all-read", {
@@ -271,11 +303,117 @@ export function ArticleCards() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-4xl mx-auto py-3 px-3 md:px-6 space-y-2">
+      <div className={viewMode === "compact" ? "divide-y" : "max-w-4xl mx-auto py-3 px-3 md:px-6 space-y-2"}>
         {articles.map((article) => {
           const isSelected = selectedArticle?.id === article.id;
-          const readingTime = getReadingTime(article.content, article.summary);
+          const readingTime = viewMode === "cards" ? getReadingTime(article.content, article.summary) : null;
 
+          // ─── Compact view: single-row line item ───
+          if (viewMode === "compact") {
+            const compactContent = (
+              <article
+                data-article-id={article.id}
+                onClick={() => handleSelectArticle(article)}
+                onKeyDown={(e) => e.key === "Enter" && handleSelectArticle(article)}
+                role="button"
+                tabIndex={0}
+                className={`group flex items-center gap-3 px-4 py-2.5 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  isSelected
+                    ? "bg-accent/40"
+                    : focusedArticleId === article.id
+                      ? "bg-accent/20 ring-1 ring-primary/20"
+                      : "hover:bg-accent/50"
+                }`}
+              >
+                {/* Unread dot */}
+                {!article.isRead && (
+                  <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                )}
+                {article.isRead && (
+                  <div className="w-2" />
+                )}
+
+                {/* Title */}
+                <h3
+                  className={`flex-1 text-[13px] leading-snug truncate ${
+                    !article.isRead
+                      ? "font-semibold text-foreground"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {article.title}
+                </h3>
+
+                {/* Feed name */}
+                <span className="text-[11px] text-muted-foreground shrink-0 max-w-[120px] truncate">
+                  {article.feedTitle}
+                </span>
+
+                {/* Date */}
+                {article.publishedAt && (
+                  <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:inline-flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(article.publishedAt)}
+                  </span>
+                )}
+
+                {/* Star */}
+                <button
+                  onClick={(e) => handleToggleStar(e, article)}
+                  className={`p-1 rounded transition-colors cursor-pointer flex-shrink-0 ${
+                    article.isStarred
+                      ? "text-amber-500"
+                      : "opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted-foreground"
+                  }`}
+                  title={article.isStarred ? "Quitar de favoritos" : "Agregar a favoritos"}
+                >
+                  <Star
+                    className="h-3.5 w-3.5"
+                    fill={article.isStarred ? "currentColor" : "none"}
+                  />
+                </button>
+              </article>
+            );
+
+            return (
+              <ContextMenu key={article.id}>
+                <ContextMenuTrigger asChild>
+                  {compactContent}
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  {article.isRead ? (
+                    <ContextMenuItem onClick={() => handleToggleRead(article)} className="gap-2">
+                      <Eye className="h-4 w-4" />
+                      Marcar como no leido
+                    </ContextMenuItem>
+                  ) : (
+                    <ContextMenuItem onClick={() => handleToggleRead(article)} className="gap-2">
+                      <EyeOff className="h-4 w-4" />
+                      Marcar como leido
+                    </ContextMenuItem>
+                  )}
+                  <ContextMenuItem
+                    onClick={() => handleToggleStarFromMenu(article)}
+                    className="gap-2"
+                  >
+                    <Star className={`h-4 w-4 ${article.isStarred ? "fill-amber-500 text-amber-500" : ""}`} />
+                    {article.isStarred ? "Quitar de favoritos" : "Agregar a favoritos"}
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => handleCopyLink(article)} className="gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Copiar link
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => handleMarkFeedRead(article.feedId)} className="gap-2">
+                    <CheckCheck className="h-4 w-4" />
+                    Marcar todo el feed como leido
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            );
+          }
+
+          // ─── Cards view (default) ───
           const cardContent = (
             <article
               data-article-id={article.id}
@@ -402,6 +540,10 @@ export function ArticleCards() {
                   <Star className={`h-4 w-4 ${article.isStarred ? "fill-amber-500 text-amber-500" : ""}`} />
                   {article.isStarred ? "Quitar de favoritos" : "Agregar a favoritos"}
                 </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleCopyLink(article)} className="gap-2">
+                  <Link2 className="h-4 w-4" />
+                  Copiar link
+                </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => handleMarkFeedRead(article.feedId)} className="gap-2">
                   <CheckCheck className="h-4 w-4" />
@@ -415,10 +557,20 @@ export function ArticleCards() {
 
       {/* Loading skeletons */}
       {isLoadingArticles && (
-        <div className="max-w-4xl mx-auto py-3 px-3 md:px-6 space-y-2">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
+        <div className={viewMode === "compact" ? "divide-y" : "max-w-4xl mx-auto py-3 px-3 md:px-6 space-y-2"}>
+          {viewMode === "compact" ? (
+            <>
+              <CompactSkeleton />
+              <CompactSkeleton />
+              <CompactSkeleton />
+            </>
+          ) : (
+            <>
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
+            </>
+          )}
         </div>
       )}
 

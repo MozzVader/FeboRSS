@@ -195,7 +195,7 @@ function SortableFeedItem({
               </span>
             )}
             {feed.lastError && (
-              <span className="text-red-500" title={feed.lastError}>
+              <span className="text-red-500" title={`Error: ${feed.lastError}`}>
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               </span>
             )}
