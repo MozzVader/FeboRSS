@@ -166,13 +166,13 @@ function SortableFeedItem({
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="overflow-hidden">
       <DropIndicator active={showDropAbove} position="top" />
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <button
             onClick={onSelect}
-            className={`flex items-center gap-2 w-full px-2 py-[7px] rounded-md text-[13px] transition-colors cursor-pointer overflow-hidden ${
+            className={`flex items-center gap-2 w-full px-2 py-[7px] rounded-md text-[13px] transition-colors cursor-pointer ${
               isSelected
                 ? "bg-accent text-accent-foreground font-medium"
                 : isFocused
@@ -792,7 +792,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       <Separator />
 
       {/* Feeds list with DnD */}
-      <ScrollArea className="flex-1 px-2 py-1">
+      <ScrollArea className="flex-1 px-2 py-1 overflow-x-hidden">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -800,7 +800,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex flex-col gap-0.5 pb-4">
+          <div className="flex flex-col gap-0.5 pb-4 min-w-0 w-full">
             {feeds.length === 0 && categories.length === 0 && (
               <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
                 <BookOpen className="h-8 w-8 text-muted-foreground/40 mb-2" />
