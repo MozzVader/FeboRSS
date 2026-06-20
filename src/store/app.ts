@@ -9,6 +9,22 @@ function loadExpandedCategories(): Set<string> {
   return new Set();
 }
 
+function loadGlobalMute(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = localStorage.getItem("febo:globalMute");
+    if (raw) return raw === "true";
+  } catch { /* ignore */ }
+  return false;
+}
+
+function saveGlobalMute(muted: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("febo:globalMute", String(muted));
+  } catch { /* ignore */ }
+}
+
 function saveExpandedCategories(categories: Set<string>) {
   if (typeof window === "undefined") return;
   try {
@@ -75,6 +91,7 @@ interface AppState {
   focusedSidebarItemId: string | null;
   isLoadingArticles: boolean;
   isRefreshing: boolean;
+  globalMute: boolean;
 
   setFeeds: (feeds: FeedItem[]) => void;
   setCategories: (categories: CategoryItem[]) => void;
@@ -98,6 +115,7 @@ interface AppState {
   setFocusedSidebarItemId: (id: string | null) => void;
   setIsLoadingArticles: (v: boolean) => void;
   setIsRefreshing: (v: boolean) => void;
+  toggleGlobalMute: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -117,6 +135,7 @@ export const useAppStore = create<AppState>((set) => ({
   focusedSidebarItemId: null,
   isLoadingArticles: false,
   isRefreshing: false,
+  globalMute: loadGlobalMute(),
 
   setFeeds: (feeds) => set({ feeds }),
   setCategories: (categories) => set({ categories }),
@@ -192,4 +211,10 @@ export const useAppStore = create<AppState>((set) => ({
   setFocusedSidebarItemId: (id) => set({ focusedSidebarItemId: id }),
   setIsLoadingArticles: (v) => set({ isLoadingArticles: v }),
   setIsRefreshing: (v) => set({ isRefreshing: v }),
+  toggleGlobalMute: () =>
+    set((state) => {
+      const next = !state.globalMute;
+      saveGlobalMute(next);
+      return { globalMute: next };
+    }),
 }));

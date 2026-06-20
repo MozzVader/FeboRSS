@@ -20,6 +20,7 @@ import {
   Upload,
   Keyboard,
   Bell,
+  BellOff,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -54,12 +55,14 @@ export default function FeedReaderApp() {
     search,
     selectedArticle,
     isRefreshing,
+    globalMute,
     setFeeds,
     setCategories,
     setSearch,
     setIsRefreshing,
     selectArticle,
     selectCategory,
+    toggleGlobalMute,
   } = useAppStore();
 
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -125,6 +128,7 @@ export default function FeedReaderApp() {
   const showNotification = (title: string, body: string) => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
+    if (useAppStore.getState().globalMute) return;
 
     // Check if page is visible — don't notify if user is actively using the app
     if (!document.hidden) return;
@@ -670,10 +674,19 @@ export default function FeedReaderApp() {
           </Button>
 
           {mounted && hasNotifFeeds && (
-            <div className="relative" title="Notificaciones activas">
-              <Bell className="h-4 w-4 text-blue-500" />
-              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500" />
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={toggleGlobalMute}
+              title={globalMute ? "Restaurar notificaciones" : "Silenciar notificaciones"}
+            >
+              {globalMute ? (
+                <BellOff className="h-4 w-4" />
+              ) : (
+                <Bell className="h-4 w-4" />
+              )}
+            </Button>
           )}
 
           {mounted && (

@@ -199,11 +199,6 @@ function SortableFeedItem({
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               </span>
             )}
-            {feed.notifyEnabled && (
-              <span className="text-blue-500" title="Notificaciones activadas">
-                <Bell className="h-3 w-3 shrink-0" />
-              </span>
-            )}
           </button>
         </ContextMenuTrigger>
         <ContextMenuContent>
