@@ -105,3 +105,44 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { id, title, url } = await request.json();
+
+    if (!id) {
+      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+    }
+
+    const data: Record<string, unknown> = {};
+    if (typeof title === "string" && title.trim()) data.title = title.trim();
+    if (typeof url === "string" && url.trim()) {
+      // Check if another feed already has this URL
+      const existing = await db.feed.findFirst({ where: { url: url.trim(), id: { not: id } } });
+      if (existing) {
+        return NextResponse.json({ error: "Otro feed ya tiene esa URL" }, { status: 409 });
+      }
+      data.url = url.trim();
+    }
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "No se proporcionaron cambios" }, { status: 400 });
+    }
+
+    const feed = await db.feed.update({
+      where: { id },
+      data,
+    });
+
+    return NextResponse.json({
+      success: true,
+      feed: { id: feed.id, title: feed.title, url: feed.url },
+    });
+  } catch (error) {
+    console.error("Error updating feed:", error);
+    return NextResponse.json(
+      { error: "Error al actualizar el feed" },
+      { status: 500 }
+    );
+  }
+}

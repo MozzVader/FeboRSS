@@ -58,6 +58,7 @@ export default function FeedReaderApp() {
     setSearch,
     setIsRefreshing,
     selectArticle,
+    selectCategory,
   } = useAppStore();
 
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -187,6 +188,51 @@ export default function FeedReaderApp() {
       const hasModal = !!store.selectedArticle;
 
       switch (e.key) {
+        case "n":
+        case "ArrowRight": {
+          if (hasModal) return;
+          e.preventDefault();
+          const sidebarItems: { id: string; type: "feed" | "category" }[] = [
+            ...store.feeds.filter((f) => !f.categoryId).map((f) => ({ id: f.id, type: "feed" as const })),
+            ...store.categories.flatMap((cat) => [
+              { id: cat.id, type: "category" as const },
+              ...cat.feeds.map((f) => ({ id: f.id, type: "feed" as const })),
+            ]),
+          ];
+          if (sidebarItems.length === 0) break;
+          const focusedId = store.focusedSidebarItemId;
+          const currentIdx = focusedId
+            ? sidebarItems.findIndex((item) => item.id === focusedId)
+            : -1;
+          const nextIdx = currentIdx + 1;
+          if (nextIdx < sidebarItems.length) {
+            store.setFocusedSidebarItemId(sidebarItems[nextIdx].id);
+          } else if (currentIdx === -1) {
+            store.setFocusedSidebarItemId(sidebarItems[0].id);
+          }
+          break;
+        }
+        case "p":
+        case "ArrowLeft": {
+          if (hasModal) return;
+          e.preventDefault();
+          const sidebarItems2: { id: string; type: "feed" | "category" }[] = [
+            ...store.feeds.filter((f) => !f.categoryId).map((f) => ({ id: f.id, type: "feed" as const })),
+            ...store.categories.flatMap((cat) => [
+              { id: cat.id, type: "category" as const },
+              ...cat.feeds.map((f) => ({ id: f.id, type: "feed" as const })),
+            ]),
+          ];
+          if (sidebarItems2.length === 0) break;
+          const focusedId2 = store.focusedSidebarItemId;
+          const currentIdx2 = focusedId2
+            ? sidebarItems2.findIndex((item) => item.id === focusedId2)
+            : 0;
+          if (currentIdx2 > 0) {
+            store.setFocusedSidebarItemId(sidebarItems2[currentIdx2 - 1].id);
+          }
+          break;
+        }
         case "j":
         case "ArrowDown": {
           if (hasModal) return;
@@ -215,14 +261,47 @@ export default function FeedReaderApp() {
           }
           break;
         }
-        case "o":
-        case "Enter": {
-          const focusedId = hasModal
-            ? null
-            : store.focusedArticleId;
+        case "o": {
           if (hasModal) return;
-          if (focusedId) {
-            const article = articles.find((a) => a.id === focusedId);
+          e.preventDefault();
+          const focusedArtId = store.focusedArticleId;
+          if (focusedArtId) {
+            const article = articles.find((a) => a.id === focusedArtId);
+            if (article) {
+              if (!article.isRead) {
+                fetch("/api/articles", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ id: article.id, isRead: true }),
+                });
+                store.updateArticleLocal(article.id, { isRead: true });
+                store.decrementUnreadCount(-1);
+                reloadFeeds();
+                toast({ title: "Marcado como leido" });
+              }
+              selectArticle(article);
+            }
+          }
+          break;
+        }
+        case "Enter": {
+          if (hasModal) return;
+          e.preventDefault();
+          // First check if a sidebar item is focused
+          const sidebarFocusedId = store.focusedSidebarItemId;
+          if (sidebarFocusedId) {
+            const isCategory = store.categories.some((c) => c.id === sidebarFocusedId);
+            if (isCategory) {
+              selectCategory(sidebarFocusedId);
+            } else {
+              store.selectFeed(sidebarFocusedId);
+            }
+            break;
+          }
+          // Otherwise open focused article
+          const focusedArtId2 = store.focusedArticleId;
+          if (focusedArtId2) {
+            const article = articles.find((a) => a.id === focusedArtId2);
             if (article) {
               if (!article.isRead) {
                 fetch("/api/articles", {
@@ -622,7 +701,10 @@ export default function FeedReaderApp() {
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm py-2">
             <ShortcutRow keys="j / ↓" desc="Articulo siguiente" />
             <ShortcutRow keys="k / ↑" desc="Articulo anterior" />
-            <ShortcutRow keys="o / Enter" desc="Abrir articulo" />
+            <ShortcutRow keys="n / →" desc="Feed siguiente" />
+            <ShortcutRow keys="p / ←" desc="Feed anterior" />
+            <ShortcutRow keys="o" desc="Abrir articulo" />
+            <ShortcutRow keys="Enter" desc="Seleccionar feed / Abrir" />
             <ShortcutRow keys="Escape" desc="Cerrar" />
             <ShortcutRow keys="s" desc="Favorito" />
             <ShortcutRow keys="m" desc="Marcar leido" />

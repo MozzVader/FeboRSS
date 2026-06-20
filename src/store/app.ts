@@ -71,6 +71,7 @@ interface AppState {
   unreadCount: number;
   starredCount: number;
   focusedArticleId: string | null;
+  focusedSidebarItemId: string | null;
   isLoadingArticles: boolean;
   isRefreshing: boolean;
 
@@ -93,6 +94,7 @@ interface AppState {
   updateFeedUnread: (id: string, delta: number) => void;
   decrementUnreadCount: (n: number) => void;
   setFocusedArticleId: (id: string | null) => void;
+  setFocusedSidebarItemId: (id: string | null) => void;
   setIsLoadingArticles: (v: boolean) => void;
   setIsRefreshing: (v: boolean) => void;
 }
@@ -111,6 +113,7 @@ export const useAppStore = create<AppState>((set) => ({
   unreadCount: 0,
   starredCount: 0,
   focusedArticleId: null,
+  focusedSidebarItemId: null,
   isLoadingArticles: false,
   isRefreshing: false,
 
@@ -185,6 +188,7 @@ export const useAppStore = create<AppState>((set) => ({
       unreadCount: Math.max(0, state.unreadCount + n),
     })),
   setFocusedArticleId: (id) => set({ focusedArticleId: id }),
+  setFocusedSidebarItemId: (id) => set({ focusedSidebarItemId: id }),
   setIsLoadingArticles: (v) => set({ isLoadingArticles: v }),
   setIsRefreshing: (v) => set({ isRefreshing: v }),
 }));

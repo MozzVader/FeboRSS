@@ -5,7 +5,14 @@ import { useAppStore } from "@/store/app";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, Clock, User } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Star, Clock, User, CheckCheck, Eye, EyeOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -184,6 +191,64 @@ export function ArticleCards() {
     }
   };
 
+  const handleToggleStarFromMenu = async (article: (typeof articles)[0]) => {
+    const newStarred = !article.isStarred;
+    try {
+      await fetch("/api/articles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: article.id, isStarred: newStarred }),
+      });
+      updateArticleLocal(article.id, { isStarred: newStarred });
+      toast({
+        title: newStarred ? "Agregado a favoritos" : "Quitado de favoritos",
+      });
+    } catch {
+      // silent
+    }
+  };
+
+  const handleToggleRead = async (article: (typeof articles)[0]) => {
+    const newRead = !article.isRead;
+    try {
+      await fetch("/api/articles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: article.id, isRead: newRead }),
+      });
+      updateArticleLocal(article.id, { isRead: newRead });
+      useAppStore.getState().decrementUnreadCount(newRead ? -1 : 1);
+      toast({
+        title: newRead ? "Marcado como leido" : "Marcado como no leido",
+      });
+    } catch {
+      // silent
+    }
+  };
+
+  const handleMarkFeedRead = async (feedId: string) => {
+    try {
+      await fetch("/api/articles/mark-all-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedId }),
+      });
+      const store = useAppStore.getState();
+      store.setArticles(
+        store.articles.map((a) => a.feedId === feedId ? { ...a, isRead: true } : a),
+        store.nextCursor,
+        0,
+        store.starredCount
+      );
+      const feedsRes = await fetch("/api/feeds");
+      const feedsData = await feedsRes.json();
+      store.setFeeds(feedsData);
+      toast({ title: "Todos marcados como leidos" });
+    } catch {
+      // silent
+    }
+  };
+
   if (articles.length === 0 && !isLoadingArticles) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 w-full p-8 text-center">
@@ -209,9 +274,8 @@ export function ArticleCards() {
           const isSelected = selectedArticle?.id === article.id;
           const readingTime = getReadingTime(article.content, article.summary);
 
-          return (
+          const cardContent = (
             <article
-              key={article.id}
               data-article-id={article.id}
               onClick={() => handleSelectArticle(article)}
               onKeyDown={(e) => e.key === "Enter" && handleSelectArticle(article)}
@@ -310,6 +374,39 @@ export function ArticleCards() {
                 </button>
               </div>
             </article>
+          );
+
+          return (
+            <ContextMenu key={article.id}>
+              <ContextMenuTrigger asChild>
+                {cardContent}
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                {article.isRead ? (
+                  <ContextMenuItem onClick={() => handleToggleRead(article)} className="gap-2">
+                    <Eye className="h-4 w-4" />
+                    Marcar como no leido
+                  </ContextMenuItem>
+                ) : (
+                  <ContextMenuItem onClick={() => handleToggleRead(article)} className="gap-2">
+                    <EyeOff className="h-4 w-4" />
+                    Marcar como leido
+                  </ContextMenuItem>
+                )}
+                <ContextMenuItem
+                  onClick={() => handleToggleStarFromMenu(article)}
+                  className="gap-2"
+                >
+                  <Star className={`h-4 w-4 ${article.isStarred ? "fill-amber-500 text-amber-500" : ""}`} />
+                  {article.isStarred ? "Quitar de favoritos" : "Agregar a favoritos"}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => handleMarkFeedRead(article.feedId)} className="gap-2">
+                  <CheckCheck className="h-4 w-4" />
+                  Marcar todo el feed como leido
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           );
         })}
       </div>

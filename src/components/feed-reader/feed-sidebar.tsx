@@ -134,6 +134,7 @@ function DroppableCategoryZone({
 function SortableFeedItem({
   feed,
   isSelected,
+  isFocused,
   onSelect,
   onContextMenuActions,
   showDropAbove,
@@ -141,9 +142,11 @@ function SortableFeedItem({
 }: {
   feed: FeedItem;
   isSelected: boolean;
+  isFocused: boolean;
   onSelect: () => void;
   onContextMenuActions: {
     onDelete: () => void;
+    onEdit: () => void;
     onMoveToCategory: (catId: string | null) => void;
     onMarkAllRead: () => void;
   };
@@ -169,7 +172,9 @@ function SortableFeedItem({
             className={`flex items-center gap-2 w-full px-2 py-[7px] rounded-md text-[13px] transition-colors cursor-pointer ${
               isSelected
                 ? "bg-accent text-accent-foreground font-medium"
-                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                : isFocused
+                  ? "bg-accent/40 text-accent-foreground ring-1 ring-primary/20"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
             }`}
           >
             <span
@@ -194,6 +199,14 @@ function SortableFeedItem({
           </button>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem
+            onClick={onContextMenuActions.onEdit}
+            className="gap-2"
+          >
+            <Pencil className="h-4 w-4" />
+            Editar feed
+          </ContextMenuItem>
+          <ContextMenuSeparator />
           <ContextMenuItem
             onClick={() => onContextMenuActions.onMoveToCategory(null)}
             className="gap-2"
@@ -284,6 +297,10 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
   const [deleteFeedId, setDeleteFeedId] = useState<string | null>(null);
   const [deleteFeedTitle, setDeleteFeedTitle] = useState("");
+  const [editFeedId, setEditFeedId] = useState<string | null>(null);
+  const [editFeedTitle, setEditFeedTitle] = useState("");
+  const [editFeedUrl, setEditFeedUrl] = useState("");
+  const [editFeedLoading, setEditFeedLoading] = useState(false);
 
   const {
     feeds,
@@ -303,6 +320,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
     toggleCategory,
     unreadCount,
     starredCount,
+    focusedSidebarItemId,
   } = useAppStore();
 
   const { toast } = useToast();
@@ -412,6 +430,51 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       setCategories(catsData);
     } catch {
       toast({ title: "Error al mover feed", variant: "destructive" });
+    }
+  };
+
+  const handleEditFeed = async () => {
+    if (!editFeedId || !editFeedTitle.trim()) return;
+    setEditFeedLoading(true);
+    try {
+      const res = await fetch("/api/feeds", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editFeedId,
+          title: editFeedTitle.trim(),
+          ...(editFeedUrl.trim() ? { url: editFeedUrl.trim() } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Update feed locally in the store
+      useAppStore.getState().updateFeedLocal(editFeedId, {
+        title: editFeedTitle.trim(),
+        ...(editFeedUrl.trim() ? { url: editFeedUrl.trim() } : {}),
+      });
+
+      // Also update feedTitle in articles
+      const store = useAppStore.getState();
+      if (editFeedUrl.trim()) {
+        store.setArticles(
+          store.articles.map((a) => a.feedId === editFeedId ? { ...a, feedTitle: editFeedTitle.trim() } : a),
+          store.nextCursor,
+          store.unreadCount,
+          store.starredCount
+        );
+      }
+
+      toast({ title: "Feed actualizado" });
+      setEditFeedId(null);
+      setEditFeedTitle("");
+      setEditFeedUrl("");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setEditFeedLoading(false);
     }
   };
 
@@ -560,11 +623,17 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
         key={feed.id}
         feed={feed}
         isSelected={selectedFeedId === feed.id}
+        isFocused={focusedSidebarItemId === feed.id}
         onSelect={() => { setFilter("all"); selectFeed(feed.id); }}
         onContextMenuActions={{
           onDelete: () => {
             setDeleteFeedId(feed.id);
             setDeleteFeedTitle(feed.title);
+          },
+          onEdit: () => {
+            setEditFeedId(feed.id);
+            setEditFeedTitle(feed.title);
+            setEditFeedUrl(feed.url);
           },
           onMoveToCategory: (catId) => handleMoveFeedToCategory(feed.id, catId),
           onMarkAllRead: () => handleMarkFeedRead(feed.id),
@@ -701,6 +770,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
               const isExpanded = expandedCategories.has(cat.id);
               const catTotalUnread = cat.feeds.reduce((sum, f) => sum + f.unreadCount, 0);
               const isCatSelected = selectedCategoryId === cat.id && !selectedFeedId;
+              const isCatFocused = focusedSidebarItemId === cat.id;
 
               return (
                 <DroppableCategoryZone id={cat.id} key={cat.id}>
@@ -718,7 +788,9 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
                             className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                               isCatSelected
                                 ? "bg-accent text-accent-foreground font-medium"
-                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                                : isCatFocused
+                                  ? "bg-accent/40 text-accent-foreground ring-1 ring-primary/20"
+                                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                             }`}
                             onClick={(e) => {
                               if (e.detail === 0) return;
@@ -799,6 +871,45 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
           </DragOverlay>
         </DndContext>
       </ScrollArea>
+
+      {/* Edit feed dialog */}
+      <Dialog open={!!editFeedId} onOpenChange={(open) => { if (!open) { setEditFeedId(null); setEditFeedTitle(""); setEditFeedUrl(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Feed</DialogTitle>
+            <DialogDescription>Modifica el nombre o la URL del feed.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Nombre</label>
+              <Input
+                placeholder="Nombre del feed"
+                value={editFeedTitle}
+                onChange={(e) => setEditFeedTitle(e.target.value)}
+                disabled={editFeedLoading}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">URL del feed</label>
+              <Input
+                placeholder="https://ejemplo.com/feed.xml"
+                value={editFeedUrl}
+                onChange={(e) => setEditFeedUrl(e.target.value)}
+                disabled={editFeedLoading}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="ghost" onClick={() => { setEditFeedId(null); setEditFeedTitle(""); setEditFeedUrl(""); }} disabled={editFeedLoading}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditFeed} disabled={editFeedLoading || !editFeedTitle.trim()}>
+              {editFeedLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              Guardar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete feed confirmation dialog */}
       <AlertDialog open={!!deleteFeedId} onOpenChange={(open) => { if (!open) { setDeleteFeedId(null); setDeleteFeedTitle(""); } }}>
