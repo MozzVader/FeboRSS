@@ -18,6 +18,7 @@ import {
   FolderInput,
   Download,
   Upload,
+  Keyboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,6 +26,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +41,7 @@ export default function FeedReaderApp() {
   const [mounted, setMounted] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
@@ -135,6 +143,224 @@ export default function FeedReaderApp() {
       if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
     };
   }, [handleRefreshAll]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+
+      // Escape always works
+      if (e.key === "Escape") {
+        if (searchOpen) {
+          setSearch("");
+          setSearchOpen(false);
+          return;
+        }
+        if (showShortcuts) {
+          setShowShortcuts(false);
+          return;
+        }
+        if (useAppStore.getState().selectedArticle) {
+          selectArticle(null);
+          return;
+        }
+        return;
+      }
+
+      // In input, only handle Escape (above)
+      if (isInput) return;
+
+      const store = useAppStore.getState();
+      const articles = store.articles;
+      const hasModal = !!store.selectedArticle;
+
+      switch (e.key) {
+        case "j":
+        case "ArrowDown": {
+          if (hasModal) return;
+          e.preventDefault();
+          const focusedId = store.focusedArticleId;
+          const idx = focusedId
+            ? articles.findIndex((a) => a.id === focusedId)
+            : -1;
+          const next = Math.min(idx + 1, articles.length - 1);
+          if (next >= 0 && next !== idx) {
+            store.setFocusedArticleId(articles[next].id);
+          }
+          break;
+        }
+        case "k":
+        case "ArrowUp": {
+          if (hasModal) return;
+          e.preventDefault();
+          const focusedId = store.focusedArticleId;
+          const idx = focusedId
+            ? articles.findIndex((a) => a.id === focusedId)
+            : articles.length;
+          const prev = Math.max(idx - 1, 0);
+          if (prev >= 0 && prev !== idx) {
+            store.setFocusedArticleId(articles[prev].id);
+          }
+          break;
+        }
+        case "o":
+        case "Enter": {
+          const focusedId = hasModal
+            ? null
+            : store.focusedArticleId;
+          if (hasModal) return;
+          if (focusedId) {
+            const article = articles.find((a) => a.id === focusedId);
+            if (article) {
+              if (!article.isRead) {
+                fetch("/api/articles", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ id: article.id, isRead: true }),
+                });
+                store.updateArticleLocal(article.id, { isRead: true });
+                store.updateFeedUnread(article.feedId, -1);
+                store.decrementUnreadCount(-1);
+              }
+              selectArticle(article);
+            }
+          }
+          break;
+        }
+        case "s": {
+          if (hasModal) {
+            // Toggle star on opened article
+            const art = store.selectedArticle;
+            if (art) {
+              const ns = !art.isStarred;
+              fetch("/api/articles", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: art.id, isStarred: ns }),
+              });
+              store.updateArticleLocal(art.id, { isStarred: ns });
+            }
+          } else {
+            // Toggle star on focused article
+            const focusedId = store.focusedArticleId;
+            if (focusedId) {
+              const article = articles.find((a) => a.id === focusedId);
+              if (article) {
+                const ns = !article.isStarred;
+                fetch("/api/articles", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ id: article.id, isStarred: ns }),
+                });
+                store.updateArticleLocal(article.id, { isStarred: ns });
+              }
+            }
+          }
+          break;
+        }
+        case "m": {
+          if (e.shiftKey) {
+            // Mark all read in current feed
+            const feedId = store.selectedFeedId;
+            if (feedId) {
+              fetch("/api/articles/mark-all-read", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ feedId }),
+              });
+              store.setArticles(
+                store.articles.map((a) =>
+                  a.feedId === feedId ? { ...a, isRead: true } : a
+                ),
+                store.nextCursor,
+                0,
+                store.starredCount
+              );
+              store.updateFeedUnread(feedId, -999);
+            }
+          } else if (hasModal) {
+            // Toggle read on opened article
+            const art = store.selectedArticle;
+            if (art) {
+              const nr = !art.isRead;
+              fetch("/api/articles", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: art.id, isRead: nr }),
+              });
+              store.updateArticleLocal(art.id, { isRead: nr });
+              if (nr) {
+                store.updateFeedUnread(art.feedId, -1);
+                store.decrementUnreadCount(-1);
+              } else {
+                store.updateFeedUnread(art.feedId, 1);
+                store.decrementUnreadCount(1);
+              }
+            }
+          } else {
+            // Toggle read on focused article
+            const focusedId = store.focusedArticleId;
+            if (focusedId) {
+              const article = articles.find((a) => a.id === focusedId);
+              if (article) {
+                const nr = !article.isRead;
+                fetch("/api/articles", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ id: article.id, isRead: nr }),
+                });
+                store.updateArticleLocal(article.id, { isRead: nr });
+                if (nr) {
+                  store.updateFeedUnread(article.feedId, -1);
+                  store.decrementUnreadCount(-1);
+                } else {
+                  store.updateFeedUnread(article.feedId, 1);
+                  store.decrementUnreadCount(1);
+                }
+              }
+            }
+          }
+          break;
+        }
+        case "r": {
+          if (!isRefreshing) handleRefreshAll();
+          break;
+        }
+        case "a": {
+          store.setFilter("all");
+          break;
+        }
+        case "u": {
+          store.setFilter("unread");
+          break;
+        }
+        case "f": {
+          store.setFilter("starred");
+          break;
+        }
+        case "/": {
+          e.preventDefault();
+          setSearchOpen(true);
+          break;
+        }
+        case "t": {
+          toggleTheme();
+          break;
+        }
+        case "?": {
+          setShowShortcuts(true);
+          break;
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [searchOpen, showShortcuts, selectArticle, setSearch, setSearchOpen, handleRefreshAll, isRefreshing]);
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -313,6 +539,16 @@ export default function FeedReaderApp() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setShowShortcuts(true)}
+            title="Atajos de teclado"
+          >
+            <Keyboard className="h-4 w-4" />
+          </Button>
+
           {mounted && (
             <Button
               variant="ghost"
@@ -373,6 +609,52 @@ export default function FeedReaderApp() {
           if (!open) selectArticle(null);
         }}
       />
+
+      {/* Keyboard shortcuts help */}
+      <Dialog open={showShortcuts} onOpenChange={setShowShortcuts}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Keyboard className="h-4 w-4" />
+              Atajos de teclado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm py-2">
+            <ShortcutRow keys="j / ↓" desc="Articulo siguiente" />
+            <ShortcutRow keys="k / ↑" desc="Articulo anterior" />
+            <ShortcutRow keys="o / Enter" desc="Abrir articulo" />
+            <ShortcutRow keys="Escape" desc="Cerrar" />
+            <ShortcutRow keys="s" desc="Favorito" />
+            <ShortcutRow keys="m" desc="Marcar leido" />
+            <ShortcutRow keys="Shift + m" desc="Marcar todos leidos" />
+            <ShortcutRow keys="r" desc="Refrescar feeds" />
+            <ShortcutRow keys="a" desc="Todos" />
+            <ShortcutRow keys="u" desc="No leidos" />
+            <ShortcutRow keys="f" desc="Favoritos" />
+            <ShortcutRow keys="/" desc="Buscar" />
+            <ShortcutRow keys="t" desc="Cambiar tema" />
+            <ShortcutRow keys="?" desc="Ver atajos" />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function ShortcutRow({ keys, desc }: { keys: string; desc: string }) {
+  return (
+    <>
+      <div className="flex items-center justify-end gap-1">
+        {keys.split(" / ").map((k, i) => (
+          <span key={i} className="flex items-center gap-0.5">
+            {i > 0 && <span className="text-[10px] text-muted-foreground mx-0.5">/</span>}
+            <kbd className="inline-flex items-center justify-center h-6 min-w-[24px] px-1.5 rounded border border-border bg-muted/50 text-[11px] font-mono font-medium">
+              {k}
+            </kbd>
+          </span>
+        ))}
+      </div>
+      <div className="text-muted-foreground">{desc}</div>
+    </>
   );
 }

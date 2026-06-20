@@ -52,6 +52,7 @@ export function ArticleCards() {
     search,
     nextCursor,
     isLoadingArticles,
+    focusedArticleId,
     selectArticle,
     updateArticleLocal,
     appendArticles,
@@ -117,6 +118,17 @@ export function ArticleCards() {
     return () => observerRef.current?.disconnect();
   }, [nextCursor, isLoadingArticles, fetchArticles]);
 
+  // Scroll focused article into view
+  useEffect(() => {
+    if (!focusedArticleId) return;
+    const el = document.querySelector(
+      `[data-article-id="${focusedArticleId}"]`
+    );
+    if (el) {
+      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [focusedArticleId]);
+
   const handleSelectArticle = async (article: (typeof articles)[0]) => {
     selectArticle(article);
     if (!article.isRead) {
@@ -180,6 +192,7 @@ export function ArticleCards() {
           return (
             <article
               key={article.id}
+              data-article-id={article.id}
               onClick={() => handleSelectArticle(article)}
               onKeyDown={(e) => e.key === "Enter" && handleSelectArticle(article)}
               role="button"
@@ -187,7 +200,9 @@ export function ArticleCards() {
               className={`group relative rounded-xl border transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 isSelected
                   ? "border-primary/40 bg-accent/30 shadow-sm"
-                  : "border-border/60 bg-card hover:border-border hover:shadow-sm"
+                  : focusedArticleId === article.id
+                    ? "border-primary/30 bg-accent/20 ring-1 ring-primary/20"
+                    : "border-border/60 bg-card hover:border-border hover:shadow-sm"
               } ${!article.isRead ? "" : "opacity-80"}`}
             >
               <div className="flex gap-4 p-4">

@@ -68,6 +68,7 @@ interface AppState {
   nextCursor: string | null;
   unreadCount: number;
   starredCount: number;
+  focusedArticleId: string | null;
   isLoadingArticles: boolean;
   isRefreshing: boolean;
 
@@ -89,6 +90,7 @@ interface AppState {
   updateFeedLocal: (id: string, data: Partial<FeedItem>) => void;
   updateFeedUnread: (id: string, delta: number) => void;
   decrementUnreadCount: (n: number) => void;
+  setFocusedArticleId: (id: string | null) => void;
   setIsLoadingArticles: (v: boolean) => void;
   setIsRefreshing: (v: boolean) => void;
 }
@@ -106,6 +108,7 @@ export const useAppStore = create<AppState>((set) => ({
   nextCursor: null,
   unreadCount: 0,
   starredCount: 0,
+  focusedArticleId: null,
   isLoadingArticles: false,
   isRefreshing: false,
 
@@ -134,18 +137,18 @@ export const useAppStore = create<AppState>((set) => ({
       return { expandedCategories: next };
     }),
   setArticles: (articles, nextCursor, unreadCount, starredCount) =>
-    set({ articles, nextCursor, unreadCount, starredCount }),
+    set({ articles, nextCursor, unreadCount, starredCount, focusedArticleId: null }),
   appendArticles: (articles, nextCursor) =>
     set((state) => ({
       articles: [...state.articles, ...articles],
       nextCursor,
     })),
   selectFeed: (feedId) =>
-    set({ selectedFeedId: feedId, selectedCategoryId: null, selectedArticle: null, nextCursor: null }),
+    set({ selectedFeedId: feedId, selectedCategoryId: null, selectedArticle: null, focusedArticleId: null, nextCursor: null }),
   selectCategory: (categoryId) =>
-    set({ selectedCategoryId: categoryId, selectedFeedId: null, selectedArticle: null, nextCursor: null }),
+    set({ selectedCategoryId: categoryId, selectedFeedId: null, selectedArticle: null, focusedArticleId: null, nextCursor: null }),
   selectArticle: (article) => set({ selectedArticle: article }),
-  setFilter: (filter) => set({ filter, selectedArticle: null, selectedFeedId: null, selectedCategoryId: null, nextCursor: null }),
+  setFilter: (filter) => set({ filter, selectedArticle: null, selectedFeedId: null, selectedCategoryId: null, focusedArticleId: null, nextCursor: null }),
   setSearch: (search) => set({ search, selectedArticle: null, nextCursor: null }),
   updateArticleLocal: (id, data) =>
     set((state) => ({
@@ -179,6 +182,7 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       unreadCount: Math.max(0, state.unreadCount + n),
     })),
+  setFocusedArticleId: (id) => set({ focusedArticleId: id }),
   setIsLoadingArticles: (v) => set({ isLoadingArticles: v }),
   setIsRefreshing: (v) => set({ isRefreshing: v }),
 }));
