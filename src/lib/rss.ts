@@ -14,39 +14,72 @@ export function isRedditFeed(url: string): boolean {
 }
 
 /**
- * Reddit image handling — 3 distinct scenarios:
+ * Reddit content parsing — revised strategy based on real Atom RSS data.
  *
- * 1. Post with <a href="i.redd.it/..."> (no <img>) → e.g. Ragnar
- *    - imageUrl comes from the <a> tag
- *    - Content has no <img>, so transform adds one
- *    - imageUrl is NOT in content before transform, but IS after
+ * Real RSS structure (old.reddit.com/r/SUBREDDIT.rss):
  *
- * 2. Post with <img src="preview.redd.it/..."> AND <a href="i.redd.it/...">
- *    - e.g. GTA VI
- *    - imageUrl comes from <img> (thumbnail, but good enough for cards)
- *    - Content already has <img> → transform also converts the <a> link
+ * 1. IMAGE POST (direct):
+ *    <a href="https://old.reddit.com/r/.../comments/...">
+ *      <img src="https://preview.redd.it/FILE?width=640&crop=smart&s=SIGNED_HASH" />
+ *    </a>
+ *    <a href="https://i.redd.it/FILE">[link]</a>
  *
- * 3. Post with <img src="preview.redd.it/...width=140"> (tiny thumbnail, no <a>)
- *    - e.g. Firefly
- *    - The <img> is too small; transform upgrades it to full-size
+ * 2. GIF POST:
+ *    Same structure as image, but URLs end in .gif.
+ *    i.redd.it/FILE.gif serves the actual animated GIF.
+ *    preview.redd.it/FILE.gif?width=640&s=HASH also works (animated preview).
+ *
+ * 3. GALLERY POST:
+ *    <img src="https://preview.redd.it/FILE?width=140&height=140&crop=1:1,smart&s=HASH" />
+ *    <a href="https://www.reddit.com/gallery/ID">[link]</a>
+ *    The thumbnail is tiny (140px) and no individual image URLs exist in RSS.
+ *
+ * 4. TEXT POST:
+ *    No <img> tags, just text content in a <div class="md">.
+ *
+ * 5. VIDEO POST (v.redd.it):
+ *    Similar to image but the underlying content is a video.
+ *    RSS only provides a preview thumbnail, no .mp4 URL.
  */
 
 /**
- * Extract Reddit image URL from <a> tags.
- * Matches both i.redd.it and preview.redd.it URLs.
+ * Extract the direct media URL from the [link] pattern.
+ * Reddit includes a <a href="MEDIA_URL">[link]</a> for image/GIF posts.
+ * This gives us the best-quality URL (i.redd.it) without preview params.
  */
-function extractRedditImageUrl(content?: string): string | undefined {
+function extractRedditDirectLink(content?: string): string | undefined {
   if (!content) return undefined;
   const match = content.match(
-    /<a[^>]+href=["'](https?:\/\/(?:preview|i)\.redd\.it\/[^"']+)["'][^>]*>/i
+    /<a\s[^>]*href=["'](https?:\/\/i\.redd\.it\/[^"']+)["'][^>]*>\[link\]<\/a>/i
   );
   return match ? match[1] : undefined;
 }
 
 /**
- * Extract Reddit image URL from <img> tags (preview.redd.it thumbnails).
+ * Extract the [link] href to detect gallery posts.
  */
-function extractRedditImgSrc(content?: string): string | undefined {
+function extractRedditLinkUrl(content?: string): string | undefined {
+  if (!content) return undefined;
+  const match = content.match(
+    /<a\s[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>\[link\]<\/a>/i
+  );
+  return match ? match[1] : undefined;
+}
+
+/**
+ * Check if a post is a Reddit gallery.
+ */
+function isRedditGallery(content?: string): boolean {
+  if (!content) return false;
+  const linkUrl = extractRedditLinkUrl(content);
+  return !!linkUrl && /\/gallery\//i.test(linkUrl);
+}
+
+/**
+ * Extract Reddit preview image URL from <img> tags (preview.redd.it).
+ * These are signed URLs with ?width=...&s=HASH — they MUST keep the params to work.
+ */
+function extractRedditPreviewImg(content?: string): string | undefined {
   if (!content) return undefined;
   const match = content.match(
     /<img[^>]+src=["'](https?:\/\/preview\.redd\.it\/[^"']+)["']/i
@@ -55,50 +88,79 @@ function extractRedditImgSrc(content?: string): string | undefined {
 }
 
 /**
- * Transform Reddit content:
- * - Convert <a href="redd.it/..."> links to <img> tags
- * - Replace tiny preview.redd.it thumbnails (width < 300) with full-size versions
+ * Determine the best imageUrl for card thumbnails.
+ *
+ * Priority:
+ * 1. i.redd.it from [link] — direct image, best quality (covers images & GIFs)
+ * 2. preview.redd.it from <img> — signed thumbnail (fallback, may be tiny for galleries)
+ *
+ * For gallery posts: skip the thumbnail if it's too small (width < 300),
+ * since a 140x140 crop isn't useful as a card preview.
+ */
+function getRedditImageUrl(content?: string): string | undefined {
+  if (!content) return undefined;
+
+  // 1. Direct media link (i.redd.it) — best quality for images and GIFs
+  const directUrl = extractRedditDirectLink(content);
+  if (directUrl) return directUrl;
+
+  // 2. Preview thumbnail from <img> tag
+  const previewUrl = extractRedditPreviewImg(content);
+  if (!previewUrl) return undefined;
+
+  // Skip tiny thumbnails (width < 300) — likely a gallery post
+  const widthMatch = previewUrl.match(/[?&]width=(\d+)/);
+  if (widthMatch) {
+    const w = parseInt(widthMatch[1], 10);
+    if (w < 300) return undefined;
+  }
+
+  return previewUrl;
+}
+
+/**
+ * Transform Reddit content for proper rendering in the article reader modal.
+ *
+ * Strategy:
+ * 1. Replace the first <a> that wraps a preview <img> (the post header thumbnail)
+ *    with just the <img> — removes the wrapping link to the post since we're already
+ *    reading the article.
+ * 2. Convert <a href="i.redd.it/...">[link]</a> into an <img> tag for the
+ *    full-size image/GIF. This is the real content, not a navigation link.
+ * 3. Remove the tiny table layout that Reddit uses for the post header.
+ * 4. For gallery posts: inject a "view gallery" link.
  */
 function transformRedditContent(content?: string): string | undefined {
   if (!content) return content;
   let result = content;
 
-  // 1. Convert <a> links with reddit image URLs into <img> tags
+  // 1. Convert <a href="i.redd.it/...">[link]</a> → <img> (full-size image/GIF)
+  // This targets specifically the [link] text to avoid touching post navigation links
   result = result.replace(
-    /<a\s[^>]*href=["'](https?:\/\/(?:preview|i)\.redd\.it\/[^"']+)["'][^>]*>[^<]*<\/a>/gi,
-    '<img src="$1" alt="" loading="lazy" />'
+    /<a\s[^>]*href=["'](https?:\/\/i\.redd\.it\/[^"']+)["'][^>]*>\[link\]<\/a>/gi,
+    '<img src="$1" alt="" loading="lazy" style="max-width:100%;border-radius:8px" />'
   );
 
-  // 2. Replace tiny preview thumbnails (width < 300) with full-size versions
+  // 2. Remove the Reddit table layout wrapper around the thumbnail
+  // The structure is: <table><tr><td><a href="..."><img src="preview.redd.it/..."></a></td><td>...submitted by...</td></tr></table>
+  // We want to keep the preview <img> but remove the table/link wrapper
   result = result.replace(
-    /(<img[^>]+src=["'])(https?:\/\/preview\.redd\.it\/[^"']+\?width=)(\d{1,3})(?:[^"']*)(["'])/gi,
-    (_match, prefix, baseUrl, width, quote) => {
-      const w = parseInt(width, 10);
-      if (w < 300) {
-        // Remove query params for full-size image
-        const cleanUrl = baseUrl.replace(/[?&].*/g, "");
-        return prefix + cleanUrl + quote;
-      }
-      return _match;
-    }
+    /<table>\s*<tr>\s*<td>\s*<a\s[^>]*href=["'][^"']*["'][^>]*>\s*(<img[^>]*src=["']https?:\/\/preview\.redd\.it\/[^"']+["'][^>]*\/?>)\s*<\/a>\s*<\/td>\s*<td>.*?<\/td>\s*<\/tr>\s*<\/table>/gis,
+    '$1'
   );
+
+  // 3. For gallery posts, add a link to view the gallery
+  const galleryLink = content.match(
+    /<a\s[^>]*href=["'](https?:\/\/(?:www\.)?reddit\.com\/gallery\/[^"']+)["'][^>]*>\[link\]<\/a>/i
+  );
+  if (galleryLink) {
+    result = result.replace(
+      /<a\s[^>]*href=["'](https?:\/\/(?:www\.)?reddit\.com\/gallery\/[^"']+)["'][^>]*>\[link\]<\/a>/gi,
+      `<a href="$1" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;padding:6px 14px;border-radius:6px;background:var(--accent);color:var(--accent-foreground);font-size:13px;text-decoration:none">Ver galería en Reddit →</a>`
+    );
+  }
 
   return result;
-}
-
-/**
- * For Reddit feeds, determine the best imageUrl for card thumbnails.
- * Priority:
- * 1. <a> link with redd.it (direct image, highest quality) — covers scenario 1 & 2
- * 2. <img> src with preview.redd.it — covers scenario 3
- */
-function getRedditImageUrl(content?: string): string | undefined {
-  if (!content) return undefined;
-  // Prefer <a> links (direct, full-size images like i.redd.it)
-  const linkUrl = extractRedditImageUrl(content);
-  if (linkUrl) return linkUrl;
-  // Fall back to <img> src (preview thumbnails)
-  return extractRedditImgSrc(content);
 }
 
 export interface ParsedFeed {
