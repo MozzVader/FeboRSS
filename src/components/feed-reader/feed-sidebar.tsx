@@ -328,8 +328,19 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedId }),
       });
+      // Update local state without reloading
+      const store = useAppStore.getState();
+      const newUnreadCount = store.articles.filter(
+        (a) => a.feedId !== feedId && !a.isRead
+      ).length;
+      store.setArticles(
+        store.articles.map((a) => a.feedId === feedId ? { ...a, isRead: true } : a),
+        store.nextCursor,
+        newUnreadCount,
+        store.starredCount
+      );
+      store.updateFeedUnread(feedId, -999);
       toast({ title: "Marcados como leidos" });
-      window.location.reload();
     } catch {
       toast({ title: "Error al marcar como leidos", variant: "destructive" });
     }

@@ -1,5 +1,21 @@
 import { create } from "zustand";
 
+function loadExpandedCategories(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem("febo:expandedCategories");
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch { /* ignore */ }
+  return new Set();
+}
+
+function saveExpandedCategories(categories: Set<string>) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("febo:expandedCategories", JSON.stringify([...categories]));
+  } catch { /* ignore */ }
+}
+
 export type FilterType = "all" | "unread" | "starred";
 
 interface ArticleItem {
@@ -81,7 +97,7 @@ export const useAppStore = create<AppState>((set) => ({
   feeds: [],
   articles: [],
   categories: [],
-  expandedCategories: new Set(),
+  expandedCategories: loadExpandedCategories(),
   selectedFeedId: null,
   selectedCategoryId: null,
   selectedArticle: null,
@@ -114,6 +130,7 @@ export const useAppStore = create<AppState>((set) => ({
       const next = new Set(state.expandedCategories);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      saveExpandedCategories(next);
       return { expandedCategories: next };
     }),
   setArticles: (articles, nextCursor, unreadCount, starredCount) =>
