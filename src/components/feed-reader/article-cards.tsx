@@ -163,6 +163,7 @@ export function ArticleCards() {
         });
         updateArticleLocal(article.id, { isRead: true });
         useAppStore.getState().decrementUnreadCount(-1);
+        useAppStore.getState().updateFeedUnread(article.feedId, -1);
         toast({ title: "Marcado como leido" });
       } catch {
         // silent
@@ -218,6 +219,7 @@ export function ArticleCards() {
       });
       updateArticleLocal(article.id, { isRead: newRead });
       useAppStore.getState().decrementUnreadCount(newRead ? -1 : 1);
+      useAppStore.getState().updateFeedUnread(article.feedId, newRead ? -1 : 1);
       toast({
         title: newRead ? "Marcado como leido" : "Marcado como no leido",
       });
