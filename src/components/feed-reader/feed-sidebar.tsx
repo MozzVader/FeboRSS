@@ -55,6 +55,8 @@ import {
   ArrowRightFromLine,
   CheckCheck,
   AlertTriangle,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -147,6 +149,7 @@ function SortableFeedItem({
   onContextMenuActions: {
     onDelete: () => void;
     onEdit: () => void;
+    onToggleNotify: () => void;
     onMoveToCategory: (catId: string | null) => void;
     onMarkAllRead: () => void;
   };
@@ -196,6 +199,11 @@ function SortableFeedItem({
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               </span>
             )}
+            {feed.notifyEnabled && (
+              <span className="text-blue-500" title="Notificaciones activadas">
+                <Bell className="h-3 w-3 shrink-0" />
+              </span>
+            )}
           </button>
         </ContextMenuTrigger>
         <ContextMenuContent>
@@ -232,6 +240,18 @@ function SortableFeedItem({
           >
             <CheckCheck className="h-4 w-4" />
             Marcar todo como leido
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={onContextMenuActions.onToggleNotify}
+            className="gap-2"
+          >
+            {feed.notifyEnabled ? (
+              <Bell className="h-4 w-4 text-blue-500" />
+            ) : (
+              <BellOff className="h-4 w-4" />
+            )}
+            {feed.notifyEnabled ? "Desactivar notificaciones" : "Activar notificaciones"}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -478,6 +498,45 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
     }
   };
 
+  const handleToggleNotify = async (feedId: string, currentState: boolean) => {
+    const newState = !currentState;
+
+    // Request notification permission if activating
+    if (newState && typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "denied") {
+        toast({
+          title: "Notificaciones bloqueadas",
+          description: "Habilita las notificaciones en la configuracion del navegador",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (Notification.permission === "default") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          toast({ title: "Permiso denegado", variant: "destructive" });
+          return;
+        }
+      }
+    }
+
+    try {
+      const res = await fetch("/api/feeds", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: feedId, notifyEnabled: newState }),
+      });
+      if (!res.ok) throw new Error();
+
+      useAppStore.getState().updateFeedLocal(feedId, { notifyEnabled: newState });
+      toast({
+        title: newState ? "Notificaciones activadas" : "Notificaciones desactivadas",
+      });
+    } catch {
+      toast({ title: "Error al cambiar notificaciones", variant: "destructive" });
+    }
+  };
+
   const handleCreateCategory = async () => {
     if (!newCatName.trim()) return;
     setNewCatLoading(true);
@@ -635,6 +694,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
             setEditFeedTitle(feed.title);
             setEditFeedUrl(feed.url);
           },
+          onToggleNotify: () => handleToggleNotify(feed.id, feed.notifyEnabled),
           onMoveToCategory: (catId) => handleMoveFeedToCategory(feed.id, catId),
           onMarkAllRead: () => handleMarkFeedRead(feed.id),
         }}

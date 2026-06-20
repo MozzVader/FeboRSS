@@ -29,6 +29,7 @@ model Feed {
   articles    Article[]
   lastError   String?
   lastRefresh DateTime?
+  notifyEnabled Boolean @default(false)
 }
 
 model Article {

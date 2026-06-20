@@ -4,12 +4,14 @@ import { parseFeedUrl } from "@/lib/rss";
 
 export async function POST() {
   try {
-    const feeds = await db.feed.findMany({ select: { id: true, url: true } });
+    const feeds = await db.feed.findMany({ select: { id: true, url: true, title: true, notifyEnabled: true } });
     let totalNew = 0;
+    const newPerFeed: { feedId: string; feedTitle: string; notifyEnabled: boolean; count: number }[] = [];
 
     for (const feed of feeds) {
       try {
         const parsed = await parseFeedUrl(feed.url);
+        let feedNewCount = 0;
 
         for (const item of parsed.items) {
           const existing = await db.article.findUnique({
@@ -29,6 +31,7 @@ export async function POST() {
               },
             });
             totalNew++;
+            feedNewCount++;
           } else {
             // Backpatch: update existing articles with missing/incorrect data
             const updates: { imageUrl?: string; content?: string } = {};
@@ -49,6 +52,10 @@ export async function POST() {
           where: { id: feed.id },
           data: { lastError: null, lastRefresh: new Date() },
         });
+
+        if (feedNewCount > 0) {
+          newPerFeed.push({ feedId: feed.id, feedTitle: feed.title, notifyEnabled: feed.notifyEnabled, count: feedNewCount });
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Error desconocido";
         console.error(`Error refreshing ${feed.url}:`, err);
@@ -74,7 +81,7 @@ export async function POST() {
       console.error("Error during cleanup:", err);
     }
 
-    return NextResponse.json({ success: true, newArticles: totalNew });
+    return NextResponse.json({ success: true, newArticles: totalNew, newPerFeed });
   } catch (error) {
     console.error("Error refreshing all feeds:", error);
     return NextResponse.json(

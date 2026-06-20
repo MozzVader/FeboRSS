@@ -19,6 +19,7 @@ import {
   Download,
   Upload,
   Keyboard,
+  Bell,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -62,6 +63,7 @@ export default function FeedReaderApp() {
   } = useAppStore();
 
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasNotifFeeds = feeds.filter((f) => f.notifyEnabled).length > 0;
 
   useEffect(() => {
     setMounted(true);
@@ -96,6 +98,15 @@ export default function FeedReaderApp() {
       const catsData = await catsRes.json();
       setCategories(catsData);
 
+      // Send browser notifications for feeds with new articles
+      if (data.newPerFeed && Array.isArray(data.newPerFeed)) {
+        for (const feed of data.newPerFeed) {
+          if (feed.notifyEnabled && feed.count > 0) {
+            showNotification(feed.feedTitle, `${feed.count} articulo${feed.count > 1 ? "s" : ""} nuevo${feed.count > 1 ? "s" : ""}`);
+          }
+        }
+      }
+
       toast({
         title: "Feeds actualizados",
         description: `${data.newArticles} articulos nuevos`,
@@ -111,6 +122,28 @@ export default function FeedReaderApp() {
     }
   }, [setFeeds, setCategories, setIsRefreshing, toast]);
 
+  const showNotification = (title: string, body: string) => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    // Check if page is visible — don't notify if user is actively using the app
+    if (!document.hidden) return;
+
+    try {
+      const notification = new Notification(title, {
+        body,
+        icon: "/logo.png",
+        tag: `feborss-${Date.now()}`,
+      });
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    } catch {
+      // Notification API not available
+    }
+  };
+
   const handleRefreshFeed = useCallback(async () => {
     if (!selectedFeedId) return;
     try {
@@ -125,6 +158,14 @@ export default function FeedReaderApp() {
       const feedsRes = await fetch("/api/feeds");
       const feedsData = await feedsRes.json();
       setFeeds(feedsData);
+
+      // Notify if this feed has notifications enabled
+      if (data.newArticles > 0) {
+        const currentFeed = useAppStore.getState().feeds.find((f) => f.id === selectedFeedId);
+        if (currentFeed?.notifyEnabled) {
+          showNotification(currentFeed.title, `${data.newArticles} articulo${data.newArticles > 1 ? "s" : ""} nuevo${data.newArticles > 1 ? "s" : ""}`);
+        }
+      }
 
       toast({
         title: "Feed actualizado",
@@ -627,6 +668,13 @@ export default function FeedReaderApp() {
           >
             <Keyboard className="h-4 w-4" />
           </Button>
+
+          {mounted && hasNotifFeeds && (
+            <div className="relative" title="Notificaciones activas">
+              <Bell className="h-4 w-4 text-blue-500" />
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500" />
+            </div>
+          )}
 
           {mounted && (
             <Button

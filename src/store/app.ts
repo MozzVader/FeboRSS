@@ -47,6 +47,7 @@ interface FeedItem {
   unreadCount: number;
   lastError: string | null;
   lastRefresh: string | null;
+  notifyEnabled: boolean;
 }
 
 interface CategoryItem {

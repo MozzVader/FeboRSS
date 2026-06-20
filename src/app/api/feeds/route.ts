@@ -27,6 +27,7 @@ export async function GET() {
         unreadCount: f._count.articles,
         lastError: f.lastError,
         lastRefresh: f.lastRefresh,
+        notifyEnabled: f.notifyEnabled,
       }))
     );
   } catch (error) {
@@ -108,7 +109,7 @@ export async function DELETE(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { id, title, url } = await request.json();
+    const { id, title, url, notifyEnabled } = await request.json();
 
     if (!id) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
@@ -124,6 +125,7 @@ export async function PATCH(request: NextRequest) {
       }
       data.url = url.trim();
     }
+    if (typeof notifyEnabled === "boolean") data.notifyEnabled = notifyEnabled;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "No se proporcionaron cambios" }, { status: 400 });
