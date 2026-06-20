@@ -103,7 +103,10 @@ export function ArticleReaderModal({
   const imageAlreadyInContent =
     hasHtmlContent &&
     selectedArticle.imageUrl &&
-    selectedArticle.content!.includes(selectedArticle.imageUrl);
+    // Normalize URLs for comparison (handle &amp; entities vs raw &)
+    selectedArticle.content!.replace(/&amp;/g, "&").includes(
+      selectedArticle.imageUrl.replace(/&amp;/g, "&")
+    );
 
   const showStandaloneImage =
     !isReddit && selectedArticle.imageUrl && !imageAlreadyInContent;
