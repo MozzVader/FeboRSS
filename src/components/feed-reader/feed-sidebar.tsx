@@ -43,6 +43,7 @@ import {
   Trash2,
   FolderInput,
   ArrowRightFromLine,
+  CheckCheck,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -133,6 +134,7 @@ function SortableFeedItem({
   onContextMenuActions: {
     onDelete: () => void;
     onMoveToCategory: (catId: string | null) => void;
+    onMarkAllRead: () => void;
   };
   showDropAbove: boolean;
   showDropBelow: boolean;
@@ -195,6 +197,13 @@ function SortableFeedItem({
               />
             </ContextMenuSubContent>
           </ContextMenuSub>
+          <ContextMenuItem
+            onClick={onContextMenuActions.onMarkAllRead}
+            className="gap-2"
+          >
+            <CheckCheck className="h-4 w-4" />
+            Marcar todo como leido
+          </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
             onClick={onContextMenuActions.onDelete}
@@ -309,6 +318,20 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  const handleMarkFeedRead = async (feedId: string) => {
+    try {
+      await fetch("/api/articles/mark-all-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedId }),
+      });
+      toast({ title: "Marcados como leidos" });
+      window.location.reload();
+    } catch {
+      toast({ title: "Error al marcar como leidos", variant: "destructive" });
     }
   };
 
@@ -517,6 +540,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
         onContextMenuActions={{
           onDelete: () => handleDeleteFeed(feed.id),
           onMoveToCategory: (catId) => handleMoveFeedToCategory(feed.id, catId),
+          onMarkAllRead: () => handleMarkFeedRead(feed.id),
         }}
         showDropAbove={showAbove}
         showDropBelow={showBelow}
