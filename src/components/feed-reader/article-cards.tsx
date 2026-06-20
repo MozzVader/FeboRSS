@@ -28,6 +28,10 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
+function decodeAmp(url: string): string {
+  return url.replace(/&amp;/g, '&');
+}
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 }
@@ -434,7 +438,7 @@ export function ArticleCards() {
                 {article.imageUrl ? (
                   <div className="hidden sm:block flex-shrink-0">
                     <img
-                      src={article.imageUrl}
+                      src={decodeAmp(article.imageUrl)}
                       alt=""
                       loading="lazy"
                       decoding="async"

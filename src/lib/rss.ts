@@ -162,8 +162,9 @@ function transformRedditContent(content?: string): string | undefined {
 
   // 2. Remove the Reddit table layout wrapper around the thumbnail
   // Works for both preview.redd.it and external-preview.redd.it
+  // Uses [\s\S] instead of the `s` flag to avoid ES2018 requirement
   result = result.replace(
-    /<table>\s*<tr>\s*<td>\s*<a\s[^>]*href=["'][^"']*["'][^>]*>\s*(<img[^>]*src=["']https?:\/\/(?:external-)?preview\.redd\.it\/[^"']+["'][^>]*\/?>)\s*<\/a>\s*<\/td>\s*<td>.*?<\/td>\s*<\/tr>\s*<\/table>/gis,
+    /<table>\s*<tr>\s*<td>\s*<a\s[^>]*href=["'][^"']*["'][^>]*>\s*(<img[^>]*src=["']https?:\/\/(?:external-)?preview\.redd\.it\/[^"']+["'][^>]*\/?>)\s*<\/a>\s*<\/td>\s*<td>[\s\S]*?<\/td>\s*<\/tr>\s*<\/table>/gi,
     '$1'
   );
 
