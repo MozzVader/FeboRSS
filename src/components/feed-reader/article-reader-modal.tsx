@@ -39,6 +39,17 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").trim();
 }
 
+function addTargetBlankToLinks(html: string): string {
+  return html.replace(
+    /<a\s+([^>]*?)href=["'][^"']*["']/gi,
+    (match, attrs) => {
+      // If it already has target="_blank", leave it as-is
+      if (/\btarget\s*=\s*["']_blank["']/i.test(attrs)) return match;
+      return `<a ${attrs}target="_blank" rel="noopener noreferrer"`;
+    }
+  );
+}
+
 export function ArticleReaderModal({
   open,
   onOpenChange,
@@ -230,7 +241,7 @@ export function ArticleReaderModal({
             {hasHtmlContent ? (
               <div
                 className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-img:rounded-lg"
-                dangerouslySetInnerHTML={{ __html: selectedArticle.content! }}
+                dangerouslySetInnerHTML={{ __html: addTargetBlankToLinks(selectedArticle.content!) }}
               />
             ) : selectedArticle.summary ? (
               <div className="text-sm leading-relaxed text-muted-foreground space-y-4">
