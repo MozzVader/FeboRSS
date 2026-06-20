@@ -57,6 +57,10 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").trim();
 }
 
+function decodeAmp(url: string): string {
+  return url.replace(/&amp;/g, '&');
+}
+
 function addTargetBlankToLinks(html: string): string {
   return html.replace(
     /<a\s+([^>]*?)href=["'][^"']*["']/gi,
@@ -310,7 +314,7 @@ export function ArticleReaderModal({
 
             {showStandaloneImage && (
               <img
-                src={selectedArticle.imageUrl}
+                src={decodeAmp(selectedArticle.imageUrl)}
                 alt=""
                 className="w-full rounded-xl mb-6 bg-muted object-cover max-h-80"
                 onError={(e) => {
