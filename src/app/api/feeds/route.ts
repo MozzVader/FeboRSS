@@ -25,6 +25,8 @@ export async function GET() {
         categoryId: f.categoryId,
         createdAt: f.createdAt,
         unreadCount: f._count.articles,
+        lastError: f.lastError,
+        lastRefresh: f.lastRefresh,
       }))
     );
   } catch (error) {

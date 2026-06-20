@@ -45,6 +45,8 @@ interface FeedItem {
   createdAt: string;
   categoryId: string | null;
   unreadCount: number;
+  lastError: string | null;
+  lastRefresh: string | null;
 }
 
 interface CategoryItem {

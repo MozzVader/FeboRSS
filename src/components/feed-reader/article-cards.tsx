@@ -21,6 +21,19 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+}
+
+function getReadingTime(content: string | null, summary: string | null): string | null {
+  const text = content ? stripHtml(content) : summary ? stripHtml(summary) : "";
+  if (!text) return null;
+  const words = text.split(/\s+/).filter(Boolean).length;
+  if (words < 60) return null; // Too short to show
+  const minutes = Math.max(1, Math.ceil(words / 200));
+  return `${minutes} min`;
+}
+
 function CardSkeleton() {
   return (
     <div className="p-4">
@@ -195,6 +208,7 @@ export function ArticleCards() {
       <div className="max-w-4xl mx-auto py-3 px-3 md:px-6 space-y-2">
         {articles.map((article) => {
           const isSelected = selectedArticle?.id === article.id;
+          const readingTime = getReadingTime(article.content, article.summary);
 
           return (
             <article
@@ -270,6 +284,11 @@ export function ArticleCards() {
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         {formatDate(article.publishedAt)}
+                      </span>
+                    )}
+                    {readingTime && (
+                      <span className="text-xs text-muted-foreground">
+                        {readingTime}
                       </span>
                     )}
                   </div>

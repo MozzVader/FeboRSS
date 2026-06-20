@@ -54,6 +54,7 @@ import {
   FolderInput,
   ArrowRightFromLine,
   CheckCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -183,6 +184,11 @@ function SortableFeedItem({
             {feed.unreadCount > 0 && (
               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
                 {feed.unreadCount}
+              </span>
+            )}
+            {feed.lastError && (
+              <span className="text-red-500" title={feed.lastError}>
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               </span>
             )}
           </button>

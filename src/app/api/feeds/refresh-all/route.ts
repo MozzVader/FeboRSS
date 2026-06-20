@@ -43,8 +43,19 @@ export async function POST() {
             }
           }
         }
+
+        // Clear error on successful refresh
+        await db.feed.update({
+          where: { id: feed.id },
+          data: { lastError: null, lastRefresh: new Date() },
+        });
       } catch (err) {
+        const message = err instanceof Error ? err.message : "Error desconocido";
         console.error(`Error refreshing ${feed.url}:`, err);
+        await db.feed.update({
+          where: { id: feed.id },
+          data: { lastError: message, lastRefresh: new Date() },
+        }).catch(() => {});
       }
     }
 

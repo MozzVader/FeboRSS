@@ -27,6 +27,8 @@ model Feed {
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   articles    Article[]
+  lastError   String?
+  lastRefresh DateTime?
 }
 
 model Article {

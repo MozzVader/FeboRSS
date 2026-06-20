@@ -60,6 +60,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Clear error on successful refresh
+    await db.feed.update({
+      where: { id: feedId },
+      data: { lastError: null, lastRefresh: new Date() },
+    });
+
     return NextResponse.json({
       success: true,
       newArticles: newCount,
@@ -69,6 +75,15 @@ export async function POST(request: NextRequest) {
     console.error("Error refreshing feed:", error);
     const message =
       error instanceof Error ? error.message : "Error al actualizar el feed";
+
+    // Track error in feed
+    try {
+      await db.feed.update({
+        where: { id: feedId },
+        data: { lastError: message, lastRefresh: new Date() },
+      });
+    } catch {}
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
