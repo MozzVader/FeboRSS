@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAppStore } from "@/store/app";
 import { FeedSidebar } from "@/components/feed-reader/feed-sidebar";
 import { ArticleCards } from "@/components/feed-reader/article-cards";
@@ -15,9 +15,20 @@ import {
   Menu,
   RefreshCw,
   Loader2,
+  FolderInput,
+  Download,
+  Upload,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
+
+const AUTO_REFRESH_MS = 60 * 60 * 1000; // 60 minutos
 
 export default function FeedReaderApp() {
   const [mounted, setMounted] = useState(false);
@@ -40,6 +51,8 @@ export default function FeedReaderApp() {
     setIsRefreshing,
     selectArticle,
   } = useAppStore();
+
+  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -113,9 +126,77 @@ export default function FeedReaderApp() {
     }
   }, [selectedFeedId, setFeeds, toast]);
 
+  // Auto-refresh every 60 minutes
+  useEffect(() => {
+    autoRefreshRef.current = setInterval(() => {
+      handleRefreshAll();
+    }, AUTO_REFRESH_MS);
+    return () => {
+      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    };
+  }, [handleRefreshAll]);
+
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
+
+  const handleExportOpml = useCallback(async () => {
+    try {
+      const res = await fetch("/api/opml");
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "feborss-subscriptions.opml";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "OPML exportado" });
+    } catch {
+      toast({ title: "Error al exportar", variant: "destructive" });
+    }
+  }, [toast]);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleImportOpml = useCallback(async () => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const onImportFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      setIsRefreshing(true);
+      const res = await fetch("/api/opml", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Reload feeds and categories
+      const feedsRes = await fetch("/api/feeds");
+      const feedsData = await feedsRes.json();
+      setFeeds(feedsData);
+      const catsRes = await fetch("/api/categories");
+      const catsData = await catsRes.json();
+      setCategories(catsData);
+
+      toast({
+        title: "OPML importado",
+        description: `${data.imported} feeds importados, ${data.skipped} omitidos`,
+      });
+    } catch {
+      toast({ title: "Error al importar OPML", variant: "destructive" });
+    } finally {
+      setIsRefreshing(false);
+    }
+
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [setFeeds, setCategories, setIsRefreshing, toast]);
 
   const getFilterLabel = () => {
     if (selectedFeedId) {
@@ -209,6 +290,29 @@ export default function FeedReaderApp() {
             </Button>
           )}
 
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="Importar / Exportar OPML"
+              >
+                <FolderInput className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportOpml} className="gap-2">
+                <Download className="h-4 w-4" />
+                Exportar OPML
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportOpml} className="gap-2">
+                <Upload className="h-4 w-4" />
+                Importar OPML
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {mounted && (
             <Button
               variant="ghost"
@@ -225,6 +329,15 @@ export default function FeedReaderApp() {
             </Button>
           )}
         </div>
+
+        {/* Hidden file input for OPML import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".opml,.xml"
+          className="hidden"
+          onChange={onImportFileChange}
+        />
       </header>
 
       {/* Main content: sidebar + cards */}
