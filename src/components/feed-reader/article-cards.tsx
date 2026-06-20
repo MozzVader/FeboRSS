@@ -155,7 +155,6 @@ export function ArticleCards() {
           body: JSON.stringify({ id: article.id, isRead: true }),
         });
         updateArticleLocal(article.id, { isRead: true });
-        useAppStore.getState().updateFeedUnread(article.feedId, -1);
         useAppStore.getState().decrementUnreadCount(-1);
         toast({ title: "Marcado como leido" });
       } catch {

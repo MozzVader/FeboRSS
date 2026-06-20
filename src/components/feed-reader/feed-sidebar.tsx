@@ -346,7 +346,11 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedId }),
       });
-      // Update local state without reloading
+      // Reload feeds to get accurate unread counts
+      const feedsRes = await fetch("/api/feeds");
+      const feedsData = await feedsRes.json();
+      setFeeds(feedsData);
+      // Update local articles
       const store = useAppStore.getState();
       const newUnreadCount = store.articles.filter(
         (a) => a.feedId !== feedId && !a.isRead
@@ -357,7 +361,6 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
         newUnreadCount,
         store.starredCount
       );
-      store.updateFeedUnread(feedId, -999);
       toast({ title: "Marcados como leidos" });
     } catch {
       toast({ title: "Error al marcar como leidos", variant: "destructive" });

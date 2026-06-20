@@ -145,6 +145,14 @@ export default function FeedReaderApp() {
   }, [handleRefreshAll]);
 
   // Keyboard shortcuts
+  const reloadFeeds = useCallback(async () => {
+    try {
+      const res = await fetch("/api/feeds");
+      const data = await res.json();
+      if (res.ok) useAppStore.getState().setFeeds(data);
+    } catch { /* silent */ }
+  }, []);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -223,8 +231,8 @@ export default function FeedReaderApp() {
                   body: JSON.stringify({ id: article.id, isRead: true }),
                 });
                 store.updateArticleLocal(article.id, { isRead: true });
-                store.updateFeedUnread(article.feedId, -1);
                 store.decrementUnreadCount(-1);
+                reloadFeeds();
                 toast({ title: "Marcado como leido" });
               }
               selectArticle(article);
@@ -281,7 +289,7 @@ export default function FeedReaderApp() {
                 0,
                 store.starredCount
               );
-              store.updateFeedUnread(feedId, -999);
+              reloadFeeds();
               toast({ title: "Todos marcados como leidos" });
             }
           } else if (hasModal) {
@@ -294,13 +302,8 @@ export default function FeedReaderApp() {
                 body: JSON.stringify({ id: art.id, isRead: nr }),
               });
               store.updateArticleLocal(art.id, { isRead: nr });
-              if (nr) {
-                store.updateFeedUnread(art.feedId, -1);
-                store.decrementUnreadCount(-1);
-              } else {
-                store.updateFeedUnread(art.feedId, 1);
-                store.decrementUnreadCount(1);
-              }
+              store.decrementUnreadCount(nr ? -1 : 1);
+              reloadFeeds();
               toast({ title: nr ? "Marcado como leido" : "Marcado como no leido" });
             }
           } else {
@@ -315,13 +318,8 @@ export default function FeedReaderApp() {
                   body: JSON.stringify({ id: article.id, isRead: nr }),
                 });
                 store.updateArticleLocal(article.id, { isRead: nr });
-                if (nr) {
-                  store.updateFeedUnread(article.feedId, -1);
-                  store.decrementUnreadCount(-1);
-                } else {
-                  store.updateFeedUnread(article.feedId, 1);
-                  store.decrementUnreadCount(1);
-                }
+                store.decrementUnreadCount(nr ? -1 : 1);
+                reloadFeeds();
                 toast({ title: nr ? "Marcado como leido" : "Marcado como no leido" });
               }
             }

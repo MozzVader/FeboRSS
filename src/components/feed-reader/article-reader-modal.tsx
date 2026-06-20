@@ -94,11 +94,10 @@ export function ArticleReaderModal({
         0,
         store.starredCount
       );
-      store.updateFeedUnread(selectedArticle.feedId, -999);
-      const updatedFeeds = store.feeds.map((f) =>
-        f.id === selectedArticle.feedId ? { ...f, unreadCount: 0 } : f
-      );
-      store.setFeeds(updatedFeeds);
+      // Reload feeds from server for accurate unread counts
+      const feedsRes = await fetch("/api/feeds");
+      const feedsData = await feedsRes.json();
+      store.setFeeds(feedsData);
       toast({ title: "Todos marcados como leidos" });
     } catch {
       // silent
