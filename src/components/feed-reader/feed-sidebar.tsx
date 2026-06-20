@@ -462,42 +462,32 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       const activeFeed = feeds.find((f) => f.id === active.id);
       if (!activeFeed) return;
 
-      let targetCategoryId: string | null = null;
+      // Determine target category
+      let targetCategoryId: string | null = activeFeed.categoryId;
 
       const overCategory = categories.find((c) => c.id === over.id);
       if (overCategory) {
+        // Dropped on a category header → place at end of that category
         targetCategoryId = overCategory.id;
       } else if (over.id === "uncategorized") {
         targetCategoryId = null;
       } else {
+        // Dropped on another feed → adopt its category and position
         const overFeed = feeds.find((f) => f.id === over.id);
         if (overFeed) targetCategoryId = overFeed.categoryId;
       }
 
-      const feedsWithoutActive = feeds.filter((f) => f.id !== active.id);
-      let newFeeds: FeedItem[];
+      // Build new ordered array: insert active feed at the position of the 'over' item
+      const overIdx = feeds.findIndex((f) => f.id === over.id);
 
-      if (targetCategoryId === null) {
-        newFeeds = [
-          ...feedsWithoutActive.filter((f) => !f.categoryId),
-          { ...activeFeed, categoryId: null },
-        ];
-        newFeeds = [...newFeeds, ...feedsWithoutActive.filter((f) => !!f.categoryId)];
-      } else {
-        const catFeeds = feedsWithoutActive.filter((f) => f.categoryId === targetCategoryId);
-        const overIdx = catFeeds.findIndex((f) => f.id === over.id);
-        const insertIdx = overIdx >= 0 ? overIdx : catFeeds.length;
-        catFeeds.splice(insertIdx, 0, { ...activeFeed, categoryId: targetCategoryId });
-        newFeeds = [
-          ...feedsWithoutActive.filter((f) => f.categoryId !== targetCategoryId && f.categoryId !== activeFeed.categoryId),
-          ...catFeeds,
-        ];
-        const origCatRemain = feedsWithoutActive.filter((f) => f.categoryId === activeFeed.categoryId && f.categoryId !== targetCategoryId);
-        if (activeFeed.categoryId !== targetCategoryId) {
-          newFeeds = [...newFeeds.filter((f) => f.categoryId !== activeFeed.categoryId), ...origCatRemain];
-        }
-      }
+      const newFeeds = feeds.filter((f) => f.id !== active.id);
+      const insertAt = overIdx >= 0 && overIdx < newFeeds.length
+        ? overIdx
+        : newFeeds.length;
 
+      newFeeds.splice(insertAt, 0, { ...activeFeed, categoryId: targetCategoryId });
+
+      // Recalculate positions
       const moveData = newFeeds.map((f, i) => ({
         id: f.id,
         categoryId: f.categoryId,
