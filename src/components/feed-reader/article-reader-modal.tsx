@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAppStore } from "@/store/app";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,21 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+
+const FONT_SIZES = [13, 15, 17, 20];
+const FONT_SIZE_KEY = "febo:articleFontSize";
+
+function loadArticleFontSize(): number {
+  if (typeof window === "undefined") return 15;
+  try {
+    const raw = localStorage.getItem(FONT_SIZE_KEY);
+    if (raw) {
+      const n = parseInt(raw, 10);
+      if (FONT_SIZES.includes(n)) return n;
+    }
+  } catch { /* ignore */ }
+  return 15;
+}
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
@@ -60,6 +76,17 @@ export function ArticleReaderModal({
 }) {
   const { selectedArticle, updateArticleLocal } = useAppStore();
   const { toast } = useToast();
+  const [fontSize, setFontSize] = useState(loadArticleFontSize);
+
+  useEffect(() => {
+    try { localStorage.setItem(FONT_SIZE_KEY, String(fontSize)); } catch { /* ignore */ }
+  }, [fontSize]);
+
+  const changeFontSize = (delta: number) => {
+    const idx = FONT_SIZES.indexOf(fontSize);
+    const next = Math.max(0, Math.min(FONT_SIZES.length - 1, idx + delta));
+    setFontSize(FONT_SIZES[next]);
+  };
 
   const handleToggleStar = async () => {
     if (!selectedArticle) return;
@@ -201,6 +228,27 @@ export function ArticleReaderModal({
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </Button>
             </a>
+            <Separator orientation="vertical" className="mx-1 h-4" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs font-mono"
+              onClick={() => changeFontSize(-1)}
+              disabled={FONT_SIZES.indexOf(fontSize) === 0}
+              title="Reducir texto"
+            >
+              A-
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs font-mono"
+              onClick={() => changeFontSize(1)}
+              disabled={FONT_SIZES.indexOf(fontSize) === FONT_SIZES.length - 1}
+              title="Aumentar texto"
+            >
+              A+
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -215,7 +263,7 @@ export function ArticleReaderModal({
 
         {/* Scrollable article content */}
         <ScrollArea className="flex-1 min-h-0">
-          <div className="max-w-3xl mx-auto px-6 py-6">
+          <div className="max-w-3xl mx-auto px-6 py-6" style={{ fontSize: `${fontSize}px` }}>
             <h1 className="text-xl md:text-2xl font-bold leading-tight tracking-tight mb-4">
               {selectedArticle.title}
             </h1>
@@ -246,10 +294,11 @@ export function ArticleReaderModal({
             {hasHtmlContent ? (
               <div
                 className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-img:rounded-lg"
+                style={{ fontSize: `${fontSize}px` }}
                 dangerouslySetInnerHTML={{ __html: addTargetBlankToLinks(selectedArticle.content!) }}
               />
             ) : selectedArticle.summary ? (
-              <div className="text-sm leading-relaxed text-muted-foreground space-y-4">
+              <div className="leading-relaxed text-muted-foreground space-y-4" style={{ fontSize: `${fontSize}px` }}>
                 {stripHtml(selectedArticle.summary).split("\n").map((p, i) =>
                   p.trim() ? (
                     <p key={i}>{p.trim()}</p>
@@ -257,7 +306,7 @@ export function ArticleReaderModal({
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground italic">
+              <p className="text-muted-foreground italic" style={{ fontSize: `${fontSize}px` }}>
                 No hay contenido disponible. Abre el articulo original para leerlo completo.
               </p>
             )}
