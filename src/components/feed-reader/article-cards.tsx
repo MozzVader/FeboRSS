@@ -436,6 +436,8 @@ export function ArticleCards() {
                     <img
                       src={article.imageUrl}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="h-28 w-28 lg:h-32 lg:w-32 rounded-lg object-cover bg-muted"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";

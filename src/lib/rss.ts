@@ -52,7 +52,7 @@ function extractRedditDirectLink(content?: string): string | undefined {
   const match = content.match(
     /<a\s[^>]*href=["'](https?:\/\/i\.redd\.it\/[^"']+)["'][^>]*>\[link\]<\/a>/i
   );
-  return match ? match[1] : undefined;
+  return match ? decodeHtmlEntities(match[1]) : undefined;
 }
 
 /**
@@ -63,7 +63,7 @@ function extractRedditLinkUrl(content?: string): string | undefined {
   const match = content.match(
     /<a\s[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>\[link\]<\/a>/i
   );
-  return match ? match[1] : undefined;
+  return match ? decodeHtmlEntities(match[1]) : undefined;
 }
 
 /**
@@ -76,17 +76,34 @@ function isRedditGallery(content?: string): boolean {
 }
 
 /**
+ * Decode common HTML entities in a URL extracted from HTML attributes.
+ * The RSS content contains HTML with &amp; in src/href attributes.
+ * When extracted via regex, these remain as literal &amp; which must be decoded
+ * before using the URL in JavaScript (e.g. as img.src), otherwise the signed
+ * Reddit URLs will be rejected because the s= hash won't match.
+ */
+function decodeHtmlEntities(url: string): string {
+  return url
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+/**
  * Extract Reddit preview image URL from <img> tags.
  * Matches both preview.redd.it (Reddit-hosted) and external-preview.redd.it (thumbnails
  * for external content like YouTube, redgifs, imgur, gfycat, etc.).
  * These are signed URLs with ?width=...&s=HASH — they MUST keep the params to work.
+ * Also decodes HTML entities (&amp; → &) since the URL comes from an HTML attribute.
  */
 function extractRedditPreviewImg(content?: string): string | undefined {
   if (!content) return undefined;
   const match = content.match(
     /<img[^>]+src=["'](https?:\/\/(?:external-)?preview\.redd\.it\/[^"']+)["']/i
   );
-  return match ? match[1] : undefined;
+  return match ? decodeHtmlEntities(match[1]) : undefined;
 }
 
 /**
