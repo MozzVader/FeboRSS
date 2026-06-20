@@ -172,7 +172,7 @@ function SortableFeedItem({
         <ContextMenuTrigger asChild>
           <button
             onClick={onSelect}
-            className={`flex items-center gap-2 w-full px-2 py-[7px] rounded-md text-[13px] transition-colors cursor-pointer ${
+            className={`flex items-center gap-2 w-full px-2 py-[7px] rounded-md text-[13px] transition-colors cursor-pointer overflow-hidden ${
               isSelected
                 ? "bg-accent text-accent-foreground font-medium"
                 : isFocused
@@ -183,12 +183,12 @@ function SortableFeedItem({
             <span
               {...attributes}
               {...listeners}
-              className="opacity-0 group-hover/sidebar:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 -ml-0.5"
+              className="opacity-0 group-hover/sidebar:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing p-0.5 -ml-0.5 shrink-0"
             >
               <GripVertical className="h-3.5 w-3.5" />
             </span>
             <FeedIcon src={feed.imageUrl} />
-            <span className="flex-1 text-left truncate text-[13px]">{feed.title}</span>
+            <span className="flex-1 min-w-0 text-left truncate text-[13px]">{feed.title}</span>
             {feed.unreadCount > 0 && (
               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
                 {feed.unreadCount}
@@ -840,7 +840,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); } }}
-                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-ring overflow-hidden ${
                               isCatSelected
                                 ? "bg-accent text-accent-foreground font-medium"
                                 : isCatFocused
@@ -854,7 +854,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
                           >
                             <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                             <Folder className={`h-4 w-4 flex-shrink-0 ${isCatSelected ? "text-amber-500" : ""}`} />
-                            <span className="flex-1 text-left truncate text-[13px]">{cat.name}</span>
+                            <span className="flex-1 min-w-0 text-left truncate text-[13px]">{cat.name}</span>
                             {catTotalUnread > 0 && (
                               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{catTotalUnread}</span>
                             )}
