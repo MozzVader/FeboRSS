@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useAppStore } from "@/store/app";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Star, Clock, User } from "lucide-react";
@@ -42,6 +43,8 @@ function CardSkeleton() {
 export function ArticleCards() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const { toast } = useToast();
 
   const {
     articles,
@@ -141,6 +144,7 @@ export function ArticleCards() {
         updateArticleLocal(article.id, { isRead: true });
         useAppStore.getState().updateFeedUnread(article.feedId, -1);
         useAppStore.getState().decrementUnreadCount(-1);
+        toast({ title: "Marcado como leido" });
       } catch {
         // silent
       }
@@ -160,6 +164,9 @@ export function ArticleCards() {
         body: JSON.stringify({ id: article.id, isStarred: newStarred }),
       });
       updateArticleLocal(article.id, { isStarred: newStarred });
+      toast({
+        title: newStarred ? "Agregado a favoritos" : "Quitado de favoritos",
+      });
     } catch {
       // silent
     }

@@ -16,6 +16,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -266,6 +276,8 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
   const [renameCatName, setRenameCatName] = useState("");
   const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(null);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
+  const [deleteFeedId, setDeleteFeedId] = useState<string | null>(null);
+  const [deleteFeedTitle, setDeleteFeedTitle] = useState("");
 
   const {
     feeds,
@@ -355,7 +367,9 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       });
       if (!res.ok) throw new Error();
       if (selectedFeedId === id) selectFeed(null);
-      toast({ title: "Feed eliminado" });
+      setDeleteFeedId(null);
+      setDeleteFeedTitle("");
+      toast({ title: "Feed eliminado", description: `"${deleteFeedTitle || "Feed"}" fue eliminado` });
       window.location.reload();
     } catch {
       toast({ title: "Error", description: "No se pudo eliminar el feed", variant: "destructive" });
@@ -539,7 +553,10 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
         isSelected={selectedFeedId === feed.id}
         onSelect={() => { setFilter("all"); selectFeed(feed.id); }}
         onContextMenuActions={{
-          onDelete: () => handleDeleteFeed(feed.id),
+          onDelete: () => {
+            setDeleteFeedId(feed.id);
+            setDeleteFeedTitle(feed.title);
+          },
           onMoveToCategory: (catId) => handleMoveFeedToCategory(feed.id, catId),
           onMarkAllRead: () => handleMarkFeedRead(feed.id),
         }}
@@ -773,6 +790,27 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
           </DragOverlay>
         </DndContext>
       </ScrollArea>
+
+      {/* Delete feed confirmation dialog */}
+      <AlertDialog open={!!deleteFeedId} onOpenChange={(open) => { if (!open) { setDeleteFeedId(null); setDeleteFeedTitle(""); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar feed</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a eliminar <strong>{deleteFeedTitle}</strong> y todos sus articulos. Esta accion no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteFeedId && handleDeleteFeed(deleteFeedId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

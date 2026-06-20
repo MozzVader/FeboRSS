@@ -225,6 +225,7 @@ export default function FeedReaderApp() {
                 store.updateArticleLocal(article.id, { isRead: true });
                 store.updateFeedUnread(article.feedId, -1);
                 store.decrementUnreadCount(-1);
+                toast({ title: "Marcado como leido" });
               }
               selectArticle(article);
             }
@@ -233,7 +234,6 @@ export default function FeedReaderApp() {
         }
         case "s": {
           if (hasModal) {
-            // Toggle star on opened article
             const art = store.selectedArticle;
             if (art) {
               const ns = !art.isStarred;
@@ -243,9 +243,9 @@ export default function FeedReaderApp() {
                 body: JSON.stringify({ id: art.id, isStarred: ns }),
               });
               store.updateArticleLocal(art.id, { isStarred: ns });
+              toast({ title: ns ? "Agregado a favoritos" : "Quitado de favoritos" });
             }
           } else {
-            // Toggle star on focused article
             const focusedId = store.focusedArticleId;
             if (focusedId) {
               const article = articles.find((a) => a.id === focusedId);
@@ -257,6 +257,7 @@ export default function FeedReaderApp() {
                   body: JSON.stringify({ id: article.id, isStarred: ns }),
                 });
                 store.updateArticleLocal(article.id, { isStarred: ns });
+                toast({ title: ns ? "Agregado a favoritos" : "Quitado de favoritos" });
               }
             }
           }
@@ -281,9 +282,9 @@ export default function FeedReaderApp() {
                 store.starredCount
               );
               store.updateFeedUnread(feedId, -999);
+              toast({ title: "Todos marcados como leidos" });
             }
           } else if (hasModal) {
-            // Toggle read on opened article
             const art = store.selectedArticle;
             if (art) {
               const nr = !art.isRead;
@@ -300,9 +301,9 @@ export default function FeedReaderApp() {
                 store.updateFeedUnread(art.feedId, 1);
                 store.decrementUnreadCount(1);
               }
+              toast({ title: nr ? "Marcado como leido" : "Marcado como no leido" });
             }
           } else {
-            // Toggle read on focused article
             const focusedId = store.focusedArticleId;
             if (focusedId) {
               const article = articles.find((a) => a.id === focusedId);
@@ -321,6 +322,7 @@ export default function FeedReaderApp() {
                   store.updateFeedUnread(article.feedId, 1);
                   store.decrementUnreadCount(1);
                 }
+                toast({ title: nr ? "Marcado como leido" : "Marcado como no leido" });
               }
             }
           }
@@ -360,7 +362,7 @@ export default function FeedReaderApp() {
 
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [searchOpen, showShortcuts, selectArticle, setSearch, setSearchOpen, handleRefreshAll, isRefreshing]);
+  }, [searchOpen, showShortcuts, selectArticle, setSearch, setSearchOpen, handleRefreshAll, isRefreshing, toast]);
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");

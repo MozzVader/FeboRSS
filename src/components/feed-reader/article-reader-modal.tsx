@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/store/app";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -58,6 +59,7 @@ export function ArticleReaderModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const { selectedArticle, updateArticleLocal } = useAppStore();
+  const { toast } = useToast();
 
   const handleToggleStar = async () => {
     if (!selectedArticle) return;
@@ -69,6 +71,9 @@ export function ArticleReaderModal({
         body: JSON.stringify({ id: selectedArticle.id, isStarred: newStarred }),
       });
       updateArticleLocal(selectedArticle.id, { isStarred: newStarred });
+      toast({
+        title: newStarred ? "Agregado a favoritos" : "Quitado de favoritos",
+      });
     } catch {
       // silent
     }
@@ -94,6 +99,7 @@ export function ArticleReaderModal({
         f.id === selectedArticle.feedId ? { ...f, unreadCount: 0 } : f
       );
       store.setFeeds(updatedFeeds);
+      toast({ title: "Todos marcados como leidos" });
     } catch {
       // silent
     }
