@@ -1,9 +1,9 @@
 import Parser from "rss-parser";
 
 const parser = new Parser({
-  timeout: 10000,
+  timeout: 15000,
   headers: {
-    "User-Agent": "FeedReader/1.0",
+    "User-Agent": "FeboRSS/1.0 (RSS Reader; +https://github.com/MozzVader/FeboRSS)",
     Accept: "application/rss+xml, application/xml, text/xml, application/atom+xml",
   },
 });
