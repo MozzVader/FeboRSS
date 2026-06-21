@@ -792,7 +792,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       <Separator />
 
       {/* Feeds list with DnD */}
-      <ScrollArea className="flex-1 w-full px-2 py-1 overflow-hidden">
+      <ScrollArea className="flex-1 w-full px-2 py-1 [&_[data-slot=scroll-area-viewport]]:!block [&_[data-slot=scroll-area-viewport]]:max-w-full [&_[data-slot=scroll-area-viewport]]:overflow-x-hidden">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
