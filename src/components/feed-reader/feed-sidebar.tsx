@@ -188,9 +188,9 @@ function SortableFeedItem({
               <GripVertical className="h-3.5 w-3.5" />
             </span>
             <FeedIcon src={feed.imageUrl} />
-            <div className="flex-1 min-w-0 text-left truncate text-[13px]">{feed.title}</div>
+            <div className="flex-1 min-w-0 text-left text-[13px]" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{feed.title}</div>
             {feed.unreadCount > 0 && (
-              <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+              <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">
                 {feed.unreadCount}
               </span>
             )}
@@ -854,9 +854,9 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
                           >
                             <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                             <Folder className={`h-4 w-4 flex-shrink-0 ${isCatSelected ? "text-amber-500" : ""}`} />
-                            <div className="flex-1 min-w-0 text-left truncate text-[13px]">{cat.name}</div>
+                            <div className="flex-1 min-w-0 text-left text-[13px]" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat.name}</div>
                             {catTotalUnread > 0 && (
-                              <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{catTotalUnread}</span>
+                              <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">{catTotalUnread}</span>
                             )}
                           </div>
                         </CollapsibleTrigger>

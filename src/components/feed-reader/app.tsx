@@ -757,7 +757,9 @@ export default function FeedReaderApp() {
                 const feed = feeds.find((f) => f.id === selectedFeedId);
                 if (feed?.notifyEnabled) {
                   return (
-                    <Bell className="h-3.5 w-3.5 text-blue-500" title="Notificaciones activadas" />
+                    <span title="Notificaciones activadas">
+                      <Bell className="h-3.5 w-3.5 text-blue-500" />
+                    </span>
                   );
                 }
                 return null;
