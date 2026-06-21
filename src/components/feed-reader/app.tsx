@@ -130,7 +130,7 @@ export default function FeedReaderApp() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [setFeeds, setCategories, setIsRefreshing, toast]);
+  }, [setFeeds, setCategories, setIsRefreshing, toast, redditUser, redditFeed]);
 
   /**
    * Aggregate and notify about new articles.
@@ -223,7 +223,7 @@ export default function FeedReaderApp() {
     } catch {
       toast({ title: "Error al actualizar el feed", variant: "destructive" });
     }
-  }, [selectedFeedId, setFeeds, toast]);
+  }, [selectedFeedId, setFeeds, toast, redditUser, redditFeed]);
 
   // Auto-refresh: dynamic interval from store
   const { refreshInterval, setRefreshInterval } = useAppStore();
