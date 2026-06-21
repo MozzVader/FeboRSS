@@ -37,14 +37,27 @@ Lectura de feeds sin distracciones, con todo lo que necesitás y nada que sobre.
 - **Contador de no leídos** por feed y total
 - **Menú contextual** (click derecho) en cada feed con acciones rápidas
 
+### 🔞 NSFW
+- **Marcar feeds como NSFW** desde el menú contextual (click derecho)
+- **Filtrado automático**: los feeds NSFW se excluyen de las vistas globales (Todos, No leídos, Favoritos)
+- Sigue accesible seleccionando el feed individual desde el sidebar
+- Badge visual en el header cuando se visualiza un feed NSFW
+
+### 🗑️ Gestión de artículos
+- **Eliminar artículos** desde el menú contextual o el modal de lectura (soft delete)
+- Los artículos eliminados se purgan automáticamente a los 30 días
+
 ### 🔔 Estado de feeds
 - **Detección de feeds caídos**: ícono rojo de advertencia cuando un feed falla al refrescar
-- **Auto-refresh** cada 60 minutos
+- **Auto-refresh configurable**: Off, 5, 15, 30 o 60 minutos desde el sidebar
 - **Backpatch inteligente**: se actualizan artículos existentes con datos faltantes (contenido HTML, imágenes)
+- **Rate limiting inteligente**: los feeds de Reddit se procesan con delay escalonado para evitar errores 429
 
 ### 🎨 Interfaz
 - **Tema claro/oscuro** con persistencia
 - **Diseño responsivo** — mobile-first con sidebar deslizable
+- **Skeleton loading realista**: placeholders que replican la estructura de cards y listas compactas
+- **Transiciones fade-in** al cambiar de feed o categoría
 - **Toast notifications** para feedback de acciones (leído, favorito, errores)
 - **Diálogo de confirmación** al eliminar un feed
 
