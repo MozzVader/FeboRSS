@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const cursor = searchParams.get("cursor");
     const limit = parseInt(searchParams.get("limit") || "20", 10);
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { isHidden: false };
 
     if (feedId) where.feedId = feedId;
     const feedIds = searchParams.get("feedIds");
@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
     }
 
     const unreadCount = await db.article.count({
-      where: { ...countWhere, isRead: false },
+      where: { ...countWhere, isRead: false, isHidden: false },
     });
     const starredCount = await db.article.count({
-      where: { ...countWhere, isStarred: true },
+      where: { ...countWhere, isStarred: true, isHidden: false },
     });
 
     return NextResponse.json({
@@ -144,7 +144,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Articulo no encontrado" }, { status: 404 });
     }
 
-    await db.article.delete({ where: { id } });
+    await db.article.update({
+      where: { id },
+      data: { isHidden: true },
+    });
 
     return NextResponse.json({
       success: true,

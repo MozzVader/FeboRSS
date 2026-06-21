@@ -66,15 +66,16 @@ export async function POST() {
       }
     }
 
-    // Cleanup: delete read articles older than 30 days (except starred)
+    // Cleanup: delete read+unstarred articles older than 30 days, and hidden articles
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       await db.article.deleteMany({
         where: {
-          isRead: true,
-          isStarred: false,
-          createdAt: { lt: thirtyDaysAgo },
+          OR: [
+            { isRead: true, isStarred: false, createdAt: { lt: thirtyDaysAgo } },
+            { isHidden: true, createdAt: { lt: thirtyDaysAgo } },
+          ],
         },
       });
     } catch (err) {

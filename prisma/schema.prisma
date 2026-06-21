@@ -46,6 +46,7 @@ model Article {
   publishedAt DateTime?
   isRead      Boolean   @default(false)
   isStarred   Boolean   @default(false)
+  isHidden    Boolean   @default(false)
   createdAt   DateTime  @default(now())
 
   @@unique([feedId, url])

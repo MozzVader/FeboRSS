@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 /**
  * Cleanup old articles:
  * - Delete articles that are read AND not starred AND older than 30 days
+ * - Delete hidden articles older than 30 days
  * - Unread articles and starred articles are preserved indefinitely
  */
 export async function POST() {
@@ -13,9 +14,10 @@ export async function POST() {
 
     const result = await db.article.deleteMany({
       where: {
-        isRead: true,
-        isStarred: false,
-        createdAt: { lt: thirtyDaysAgo },
+        OR: [
+          { isRead: true, isStarred: false, createdAt: { lt: thirtyDaysAgo } },
+          { isHidden: true, createdAt: { lt: thirtyDaysAgo } },
+        ],
       },
     });
 
