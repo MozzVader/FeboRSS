@@ -59,7 +59,7 @@ interface ArticleItem {
   isStarred: boolean;
 }
 
-interface FeedItem {
+export interface FeedItem {
   id: string;
   title: string;
   url: string;

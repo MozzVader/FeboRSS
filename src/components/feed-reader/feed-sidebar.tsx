@@ -677,7 +677,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
     const isOverThis = overId === feed.id && activeDragId !== feed.id;
     const activeFeedData = activeDragId ? feeds.find((f) => f.id === activeDragId) : null;
     // Show drop above if dragged item was previously after this item in the list
-    const showAbove = isOverThis && activeFeedData && activeFeedData.categoryId === feed.categoryId;
+    const showAbove = !!(isOverThis && activeFeedData && activeFeedData.categoryId === feed.categoryId);
     const showBelow = false; // The DnD overlay handles the visual
 
     return (
