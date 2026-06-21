@@ -27,6 +27,7 @@ db/
 .DS_Store
 *.pem
 *.zip
+ecosystem.config.cjs
 
 # debug
 npm-debug.log*
