@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useAppStore, type FeedItem, type FilterType } from "@/store/app";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -320,6 +320,7 @@ function FeedCategoryMenuItems({
 
 /* ─── Main sidebar ─── */
 export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
+  const [mounted, setMounted] = useState(false);
   const [addUrl, setAddUrl] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
@@ -337,6 +338,8 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
   const [editFeedTitle, setEditFeedTitle] = useState("");
   const [editFeedUrl, setEditFeedUrl] = useState("");
   const [editFeedLoading, setEditFeedLoading] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const {
     feeds,
@@ -753,8 +756,8 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
         <div className="flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isRefreshing} title={`Auto-refresh: ${refreshInterval > 0 ? `cada ${refreshInterval} min` : 'desactivado'}`}>
-                {refreshInterval > 0 ? (
+              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isRefreshing} title={mounted ? `Auto-refresh: ${refreshInterval > 0 ? `cada ${refreshInterval} min` : 'desactivado'}` : "Actualizar todos los feeds"}>
+                {mounted && refreshInterval > 0 ? (
                   <Timer className="h-3.5 w-3.5 text-blue-500" />
                 ) : (
                   <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
