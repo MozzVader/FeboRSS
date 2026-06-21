@@ -47,18 +47,34 @@ function getReadingTime(content: string | null, summary: string | null): string 
 
 function CardSkeleton() {
   return (
-    <div className="p-4">
-      <div className="flex gap-4">
-        <Skeleton className="h-28 w-28 lg:h-32 lg:w-32 rounded-xl flex-shrink-0" />
-        <div className="flex-1 space-y-3 py-1">
-          <Skeleton className="h-5 w-4/5" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <div className="flex gap-3 pt-2">
+    <div className="rounded-xl border border-border/60 bg-card animate-pulse">
+      <div className="flex gap-4 p-4">
+        {/* Thumbnail placeholder */}
+        <Skeleton className="h-28 w-28 lg:h-32 lg:w-32 rounded-lg flex-shrink-0 bg-muted" />
+        {/* Content */}
+        <div className="flex-1 min-w-0 py-0.5">
+          {/* Unread dot + Title */}
+          <div className="flex items-start gap-2">
+            <Skeleton className="w-2 h-2 rounded-full bg-blue-500/40 mt-2 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-[15px] w-4/5" />
+              <Skeleton className="h-[15px] w-2/5" />
+            </div>
+          </div>
+          {/* Summary */}
+          <div className="mt-1.5 space-y-2">
+            <Skeleton className="h-3.5 w-full" />
+            <Skeleton className="h-3.5 w-3/4" />
+          </div>
+          {/* Metadata badges */}
+          <div className="flex items-center gap-2 mt-2.5">
+            <Skeleton className="h-5 w-16 rounded-md" />
             <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-14" />
           </div>
         </div>
+        {/* Star button placeholder */}
+        <Skeleton className="w-7 h-7 rounded-md flex-shrink-0 self-start mt-1" />
       </div>
     </div>
   );
@@ -66,11 +82,12 @@ function CardSkeleton() {
 
 function CompactSkeleton() {
   return (
-    <div className="px-4 py-2.5 flex items-center gap-3">
-      <Skeleton className="h-2 w-2 rounded-full" />
-      <Skeleton className="h-4 flex-1 max-w-[50%]" />
+    <div className="flex items-center gap-3 px-4 py-2.5 animate-pulse">
+      <Skeleton className="w-2 h-2 rounded-full bg-blue-500/40" />
+      <Skeleton className="h-[13px] flex-1 max-w-[45%]" />
       <Skeleton className="h-3 w-24" />
-      <Skeleton className="h-3 w-16" />
+      <Skeleton className="h-3 w-14" />
+      <Skeleton className="w-3.5 h-3.5" />
     </div>
   );
 }
@@ -332,7 +349,10 @@ export function ArticleCards() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className={viewMode === "compact" ? "divide-y" : "max-w-4xl mx-auto py-3 px-3 md:px-6 space-y-2"}>
+      <div
+        key={`${selectedFeedId || selectedCategoryId || filter}`}
+        className={`${viewMode === "compact" ? "divide-y" : "max-w-4xl mx-auto py-3 px-3 md:px-6 space-y-2"} animate-in fade-in duration-300`}
+      >
         {articles.map((article) => {
           const isSelected = selectedArticle?.id === article.id;
           const readingTime = viewMode === "cards" ? getReadingTime(article.content, article.summary) : null;
