@@ -26,6 +26,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -45,6 +51,7 @@ import {
   BookOpen,
   Loader2,
   Newspaper,
+  Timer,
   FolderPlus,
   Folder,
   ChevronRight,
@@ -350,6 +357,8 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
     unreadCount,
     starredCount,
     focusedSidebarItemId,
+    refreshInterval,
+    setRefreshInterval,
   } = useAppStore();
 
   const { toast } = useToast();
@@ -742,9 +751,58 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       <div className="p-4 flex items-center justify-between">
         <h2 className="font-semibold text-[15px] tracking-tight">Feeds</h2>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefreshAll} disabled={isRefreshing} title="Actualizar todos los feeds">
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isRefreshing} title={`Auto-refresh: ${refreshInterval > 0 ? `cada ${refreshInterval} min` : 'desactivado'}`}>
+                {refreshInterval > 0 ? (
+                  <Timer className="h-3.5 w-3.5 text-blue-500" />
+                ) : (
+                  <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onRefreshAll} className="gap-2">
+                <RefreshCw className="h-3.5 w-3.5" />
+                Actualizar ahora
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setRefreshInterval(0)}
+                className={`gap-2 ${refreshInterval === 0 ? "bg-accent" : ""}`}
+              >
+                Desactivado
+                {refreshInterval === 0 && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setRefreshInterval(5)}
+                className={`gap-2 ${refreshInterval === 5 ? "bg-accent" : ""}`}
+              >
+                Cada 5 min
+                {refreshInterval === 5 && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setRefreshInterval(15)}
+                className={`gap-2 ${refreshInterval === 15 ? "bg-accent" : ""}`}
+              >
+                Cada 15 min
+                {refreshInterval === 15 && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setRefreshInterval(30)}
+                className={`gap-2 ${refreshInterval === 30 ? "bg-accent" : ""}`}
+              >
+                Cada 30 min
+                {refreshInterval === 30 && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setRefreshInterval(60)}
+                className={`gap-2 ${refreshInterval === 60 ? "bg-accent" : ""}`}
+              >
+                Cada 60 min
+                {refreshInterval === 60 && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Dialog open={newCatOpen} onOpenChange={setNewCatOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" title="Nueva categoria">

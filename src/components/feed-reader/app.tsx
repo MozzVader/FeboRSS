@@ -39,7 +39,7 @@ import {
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
 
-const AUTO_REFRESH_MS = 60 * 60 * 1000; // 60 minutos
+// Auto-refresh controlled by store (refreshInterval in minutes, 0 = off)
 
 export default function FeedReaderApp() {
   const [mounted, setMounted] = useState(false);
@@ -219,15 +219,19 @@ export default function FeedReaderApp() {
     }
   }, [selectedFeedId, setFeeds, toast]);
 
-  // Auto-refresh every 60 minutes
+  // Auto-refresh: dynamic interval from store
+  const { refreshInterval, setRefreshInterval } = useAppStore();
   useEffect(() => {
-    autoRefreshRef.current = setInterval(() => {
-      handleRefreshAll();
-    }, AUTO_REFRESH_MS);
+    if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    if (refreshInterval > 0) {
+      autoRefreshRef.current = setInterval(() => {
+        handleRefreshAll();
+      }, refreshInterval * 60 * 1000);
+    }
     return () => {
       if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
     };
-  }, [handleRefreshAll]);
+  }, [handleRefreshAll, refreshInterval]);
 
   // Keyboard shortcuts
   const reloadFeeds = useCallback(async () => {

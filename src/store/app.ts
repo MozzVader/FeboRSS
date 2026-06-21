@@ -25,6 +25,15 @@ function saveGlobalMute(muted: boolean) {
   } catch { /* ignore */ }
 }
 
+function loadRefreshInterval(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = localStorage.getItem("febo:refreshInterval");
+    if (raw) return parseInt(raw, 10) || 0;
+  } catch { /* ignore */ }
+  return 0;
+}
+
 function loadViewMode(): "cards" | "compact" {
   if (typeof window === "undefined") return "cards";
   try {
@@ -103,6 +112,7 @@ interface AppState {
   isRefreshing: boolean;
   globalMute: boolean;
   viewMode: "cards" | "compact";
+  refreshInterval: number; // minutes, 0 = off
 
   setFeeds: (feeds: FeedItem[]) => void;
   setCategories: (categories: CategoryItem[]) => void;
@@ -129,6 +139,7 @@ interface AppState {
   setIsRefreshing: (v: boolean) => void;
   toggleGlobalMute: () => void;
   setViewMode: (mode: "cards" | "compact") => void;
+  setRefreshInterval: (minutes: number) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -150,6 +161,7 @@ export const useAppStore = create<AppState>((set) => ({
   isRefreshing: false,
   globalMute: loadGlobalMute(),
   viewMode: loadViewMode(),
+  refreshInterval: loadRefreshInterval(),
 
   setFeeds: (feeds) => set({ feeds }),
   setCategories: (categories) => set({ categories }),
@@ -253,5 +265,10 @@ export const useAppStore = create<AppState>((set) => ({
     set(() => {
       try { localStorage.setItem("febo:viewMode", mode); } catch { /* ignore */ }
       return { viewMode: mode };
+    }),
+  setRefreshInterval: (minutes) =>
+    set(() => {
+      try { localStorage.setItem("febo:refreshInterval", String(minutes)); } catch { /* ignore */ }
+      return { refreshInterval: minutes };
     }),
 }));
