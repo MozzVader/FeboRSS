@@ -214,6 +214,12 @@ export const useAppStore = create<AppState>((set) => ({
       feeds: state.feeds.map((f) =>
         f.id === id ? { ...f, unreadCount: Math.max(0, f.unreadCount + delta) } : f
       ),
+      categories: state.categories.map((c) => ({
+        ...c,
+        feeds: c.feeds.map((f) =>
+          f.id === id ? { ...f, unreadCount: Math.max(0, f.unreadCount + delta) } : f
+        ),
+      })),
     })),
   decrementUnreadCount: (n) =>
     set((state) => ({

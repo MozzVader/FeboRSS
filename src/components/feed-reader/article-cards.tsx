@@ -281,6 +281,9 @@ export function ArticleCards() {
       const feedsRes = await fetch("/api/feeds");
       const feedsData = await feedsRes.json();
       store.setFeeds(feedsData);
+      const catsRes = await fetch("/api/categories");
+      const catsData = await catsRes.json();
+      store.setCategories(catsData);
       toast({ title: "Todos marcados como leidos" });
     } catch {
       // silent

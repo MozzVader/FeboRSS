@@ -384,10 +384,13 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedId }),
       });
-      // Reload feeds to get accurate unread counts
+      // Reload feeds and categories to get accurate unread counts
       const feedsRes = await fetch("/api/feeds");
       const feedsData = await feedsRes.json();
       setFeeds(feedsData);
+      const catsRes = await fetch("/api/categories");
+      const catsData = await catsRes.json();
+      setCategories(catsData);
       // Update local articles
       const store = useAppStore.getState();
       const newUnreadCount = store.articles.filter(
