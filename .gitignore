@@ -27,6 +27,7 @@ db/
 .DS_Store
 *.pem
 *.zip
+*.ps1
 ecosystem.config.cjs
 
 # debug
