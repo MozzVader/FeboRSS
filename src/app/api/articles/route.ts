@@ -26,9 +26,10 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Exclude NSFW feeds from global views ("Todos", "No leídos", "Favoritos")
+    // Exclude NSFW feeds from global views ("Todos", "No leídos")
+    // but allow in "Favoritos" — if user starred it, they want to see it
     // unless a specific feed or category is selected
-    const excludeNsfw = !feedId && !feedIds;
+    const excludeNsfw = !feedId && !feedIds && !onlyStarred;
     let nsfwFeedIds: { id: string }[] = [];
     if (excludeNsfw) {
       nsfwFeedIds = await db.feed.findMany({
@@ -58,17 +59,17 @@ export async function GET(request: NextRequest) {
       nextCursor = next!.id;
     }
 
-    // Build base where for counts (exclude NSFW in global views)
-    const countWhere: Record<string, unknown> = {};
+    // Build base where for counts (exclude NSFW for unread, but allow for starred)
+    const countWhereUnread: Record<string, unknown> = {};
     if (excludeNsfw) {
-      countWhere.feedId = { notIn: nsfwFeedIds.map((f) => f.id) };
+      countWhereUnread.feedId = { notIn: nsfwFeedIds.map((f) => f.id) };
     }
 
     const unreadCount = await db.article.count({
-      where: { ...countWhere, isRead: false, isHidden: false },
+      where: { ...countWhereUnread, isRead: false, isHidden: false },
     });
     const starredCount = await db.article.count({
-      where: { ...countWhere, isStarred: true, isHidden: false },
+      where: { isStarred: true, isHidden: false },
     });
 
     return NextResponse.json({
