@@ -188,7 +188,7 @@ function SortableFeedItem({
               <GripVertical className="h-3.5 w-3.5" />
             </span>
             <FeedIcon src={feed.imageUrl} />
-            <div className="flex-1 min-w-0 text-left text-[13px]" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{feed.title}</div>
+            <div className="flex-1 min-w-0 text-left text-[13px] truncate">{feed.title}</div>
             {feed.unreadCount > 0 && (
               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">
                 {feed.unreadCount}
@@ -700,7 +700,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-muted/30 group/sidebar">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-muted/30 group/sidebar">
       {/* Header */}
       <div className="p-4 flex items-center justify-between">
         <h2 className="font-semibold text-[15px] tracking-tight">Feeds</h2>
@@ -792,7 +792,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       <Separator />
 
       {/* Feeds list with DnD */}
-      <ScrollArea className="flex-1 px-2 py-1 [&>div]:!overflow-x-hidden">
+      <ScrollArea className="flex-1 w-full px-2 py-1 overflow-hidden">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -854,7 +854,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
                           >
                             <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                             <Folder className={`h-4 w-4 flex-shrink-0 ${isCatSelected ? "text-amber-500" : ""}`} />
-                            <div className="flex-1 min-w-0 text-left text-[13px]" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat.name}</div>
+                            <div className="flex-1 min-w-0 text-left text-[13px] truncate">{cat.name}</div>
                             {catTotalUnread > 0 && (
                               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">{catTotalUnread}</span>
                             )}
