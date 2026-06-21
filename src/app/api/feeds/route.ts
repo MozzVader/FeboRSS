@@ -28,6 +28,7 @@ export async function GET() {
         lastError: f.lastError,
         lastRefresh: f.lastRefresh,
         notifyEnabled: f.notifyEnabled,
+        isNsfw: f.isNsfw,
       }))
     );
   } catch (error) {
@@ -109,7 +110,7 @@ export async function DELETE(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { id, title, url, notifyEnabled } = await request.json();
+    const { id, title, url, notifyEnabled, isNsfw } = await request.json();
 
     if (!id) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
@@ -126,6 +127,7 @@ export async function PATCH(request: NextRequest) {
       data.url = url.trim();
     }
     if (typeof notifyEnabled === "boolean") data.notifyEnabled = notifyEnabled;
+    if (typeof isNsfw === "boolean") data.isNsfw = isNsfw;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "No se proporcionaron cambios" }, { status: 400 });

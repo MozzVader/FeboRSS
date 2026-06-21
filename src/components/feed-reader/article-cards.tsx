@@ -12,7 +12,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Star, Clock, User, CheckCheck, Eye, EyeOff, Link2 } from "lucide-react";
+import { Star, Clock, User, CheckCheck, Eye, EyeOff, Link2, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -290,6 +290,28 @@ export function ArticleCards() {
     }
   };
 
+  const handleDeleteArticle = async (article: (typeof articles)[0]) => {
+    try {
+      const res = await fetch("/api/articles", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: article.id }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      const store = useAppStore.getState();
+      store.removeArticleLocal(article.id);
+      if (data.article.wasUnread) {
+        store.decrementUnreadCount(-1);
+        store.updateFeedUnread(article.feedId, -1);
+      }
+      toast({ title: "Articulo eliminado" });
+    } catch {
+      toast({ title: "Error al eliminar articulo", variant: "destructive" });
+    }
+  };
+
   if (articles.length === 0 && !isLoadingArticles) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 w-full p-8 text-center">
@@ -414,6 +436,11 @@ export function ArticleCards() {
                   <ContextMenuItem onClick={() => handleMarkFeedRead(article.feedId)} className="gap-2">
                     <CheckCheck className="h-4 w-4" />
                     Marcar todo el feed como leido
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => handleDeleteArticle(article)} className="gap-2 text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar articulo
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -557,6 +584,11 @@ export function ArticleCards() {
                 <ContextMenuItem onClick={() => handleMarkFeedRead(article.feedId)} className="gap-2">
                   <CheckCheck className="h-4 w-4" />
                   Marcar todo el feed como leido
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => handleDeleteArticle(article)} className="gap-2 text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar articulo
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>

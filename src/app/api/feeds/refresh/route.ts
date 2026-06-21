@@ -3,8 +3,10 @@ import { db } from "@/lib/db";
 import { parseFeedUrl } from "@/lib/rss";
 
 export async function POST(request: NextRequest) {
+  let feedId = "";
   try {
-    const { feedId } = await request.json();
+    const body = await request.json();
+    feedId = body.feedId;
 
     if (!feedId) {
       return NextResponse.json(

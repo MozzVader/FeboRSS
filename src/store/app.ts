@@ -73,6 +73,7 @@ export interface FeedItem {
   lastError: string | null;
   lastRefresh: string | null;
   notifyEnabled: boolean;
+  isNsfw: boolean;
 }
 
 interface CategoryItem {
@@ -120,6 +121,7 @@ interface AppState {
   removeArticleLocal: (id: string) => void;
   updateFeedLocal: (id: string, data: Partial<FeedItem>) => void;
   updateFeedUnread: (id: string, delta: number) => void;
+  updateFeedNsfw: (id: string, isNsfw: boolean) => void;
   decrementUnreadCount: (n: number) => void;
   setFocusedArticleId: (id: string | null) => void;
   setFocusedSidebarItemId: (id: string | null) => void;
@@ -218,6 +220,18 @@ export const useAppStore = create<AppState>((set) => ({
         ...c,
         feeds: c.feeds.map((f) =>
           f.id === id ? { ...f, unreadCount: Math.max(0, f.unreadCount + delta) } : f
+        ),
+      })),
+    })),
+  updateFeedNsfw: (id, isNsfw) =>
+    set((state) => ({
+      feeds: state.feeds.map((f) =>
+        f.id === id ? { ...f, isNsfw } : f
+      ),
+      categories: state.categories.map((c) => ({
+        ...c,
+        feeds: c.feeds.map((f) =>
+          f.id === id ? { ...f, isNsfw } : f
         ),
       })),
     })),

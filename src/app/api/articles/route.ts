@@ -26,6 +26,23 @@ export async function GET(request: NextRequest) {
       ];
     }
 
+    // Exclude NSFW feeds from global views ("Todos", "No leídos", "Favoritos")
+    // unless a specific feed or category is selected
+    const excludeNsfw = !feedId && !feedIds;
+    let nsfwFeedIds: { id: string }[] = [];
+    if (excludeNsfw) {
+      nsfwFeedIds = await db.feed.findMany({
+        where: { isNsfw: true },
+        select: { id: true },
+      });
+      if (nsfwFeedIds.length > 0) {
+        where.feedId = {
+          ...(typeof where.feedId === "object" ? where.feedId : {}),
+          notIn: nsfwFeedIds.map((f) => f.id),
+        };
+      }
+    }
+
     const articles = await db.article.findMany({
       where,
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
@@ -41,8 +58,18 @@ export async function GET(request: NextRequest) {
       nextCursor = next!.id;
     }
 
-    const unreadCount = await db.article.count({ where: { isRead: false } });
-    const starredCount = await db.article.count({ where: { isStarred: true } });
+    // Build base where for counts (exclude NSFW in global views)
+    const countWhere: Record<string, unknown> = {};
+    if (excludeNsfw) {
+      countWhere.feedId = { notIn: nsfwFeedIds.map((f) => f.id) };
+    }
+
+    const unreadCount = await db.article.count({
+      where: { ...countWhere, isRead: false },
+    });
+    const starredCount = await db.article.count({
+      where: { ...countWhere, isStarred: true },
+    });
 
     return NextResponse.json({
       articles: articles.map((a) => ({
@@ -95,6 +122,38 @@ export async function PATCH(request: NextRequest) {
     console.error("Error updating article:", error);
     return NextResponse.json(
       { error: "Error al actualizar el articulo" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { id } = await request.json();
+
+    if (!id) {
+      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+    }
+
+    const article = await db.article.findUnique({
+      where: { id },
+      select: { id: true, isRead: true, feedId: true },
+    });
+
+    if (!article) {
+      return NextResponse.json({ error: "Articulo no encontrado" }, { status: 404 });
+    }
+
+    await db.article.delete({ where: { id } });
+
+    return NextResponse.json({
+      success: true,
+      article: { id: article.id, feedId: article.feedId, wasUnread: !article.isRead },
+    });
+  } catch (error) {
+    console.error("Error deleting article:", error);
+    return NextResponse.json(
+      { error: "Error al eliminar el articulo" },
       { status: 500 }
     );
   }

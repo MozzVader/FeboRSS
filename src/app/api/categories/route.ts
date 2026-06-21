@@ -34,6 +34,8 @@ export async function GET() {
           createdAt: f.createdAt,
           categoryId: f.categoryId,
           unreadCount: f._count.articles,
+          notifyEnabled: f.notifyEnabled,
+          isNsfw: f.isNsfw,
         })),
       }))
     );

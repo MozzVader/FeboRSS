@@ -22,6 +22,7 @@ import {
   CheckCheck,
   X,
   Link2,
+  Trash2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -156,6 +157,30 @@ export function ArticleReaderModal({
     }
   };
 
+  const handleDeleteArticle = async () => {
+    if (!selectedArticle) return;
+    try {
+      const res = await fetch("/api/articles", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedArticle.id }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      const store = useAppStore.getState();
+      store.removeArticleLocal(selectedArticle.id);
+      if (data.article.wasUnread) {
+        store.decrementUnreadCount(-1);
+        store.updateFeedUnread(selectedArticle.feedId, -1);
+      }
+      onOpenChange(false);
+      toast({ title: "Articulo eliminado" });
+    } catch {
+      toast({ title: "Error al eliminar articulo", variant: "destructive" });
+    }
+  };
+
   if (!selectedArticle) return null;
 
   // Consider content as "real content" if it contains HTML tags (not just plain text)
@@ -262,6 +287,15 @@ export function ArticleReaderModal({
             >
               <Link2 className="h-4 w-4 text-muted-foreground" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={handleDeleteArticle}
+              title="Eliminar articulo"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
             <Separator orientation="vertical" className="mx-1 h-4" />
             <Button
               variant="ghost"
@@ -314,7 +348,7 @@ export function ArticleReaderModal({
 
             {showStandaloneImage && (
               <img
-                src={decodeAmp(selectedArticle.imageUrl)}
+                src={decodeAmp(selectedArticle.imageUrl ?? "")}
                 alt=""
                 className="w-full rounded-xl mb-6 bg-muted object-cover max-h-80"
                 onError={(e) => {

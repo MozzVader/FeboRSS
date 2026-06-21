@@ -57,6 +57,7 @@ import {
   AlertTriangle,
   Bell,
   BellOff,
+  EyeOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -150,6 +151,7 @@ function SortableFeedItem({
     onDelete: () => void;
     onEdit: () => void;
     onToggleNotify: () => void;
+    onToggleNsfw: () => void;
     onMoveToCategory: (catId: string | null) => void;
     onMarkAllRead: () => void;
   };
@@ -194,6 +196,11 @@ function SortableFeedItem({
             </span>
             <FeedIcon src={feed.imageUrl} />
             <div className="flex-1 min-w-0 text-left text-[13px] truncate max-w-full" title={feed.title}>{truncatedTitle}</div>
+            {feed.isNsfw && (
+              <span className="text-[9px] bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1 py-0.5 rounded font-bold uppercase tracking-wider shrink-0" title="NSFW">
+                nsfw
+              </span>
+            )}
             {feed.unreadCount > 0 && (
               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">
                 {feed.unreadCount}
@@ -252,6 +259,13 @@ function SortableFeedItem({
               <BellOff className="h-4 w-4" />
             )}
             {feed.notifyEnabled ? "Desactivar notificaciones" : "Activar notificaciones"}
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={onContextMenuActions.onToggleNsfw}
+            className="gap-2"
+          >
+            <EyeOff className="h-4 w-4" />
+            {feed.isNsfw ? "Desmarcar como NSFW" : "Marcar como NSFW"}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -540,6 +554,25 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
     }
   };
 
+  const handleToggleNsfw = async (feedId: string, currentState: boolean) => {
+    const newState = !currentState;
+    try {
+      const res = await fetch("/api/feeds", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: feedId, isNsfw: newState }),
+      });
+      if (!res.ok) throw new Error();
+
+      useAppStore.getState().updateFeedNsfw(feedId, newState);
+      toast({
+        title: newState ? "Feed marcado como NSFW" : "Feed desmarcado como NSFW",
+      });
+    } catch {
+      toast({ title: "Error al cambiar NSFW", variant: "destructive" });
+    }
+  };
+
   const handleCreateCategory = async () => {
     if (!newCatName.trim()) return;
     setNewCatLoading(true);
@@ -698,6 +731,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
             setEditFeedUrl(feed.url);
           },
           onToggleNotify: () => handleToggleNotify(feed.id, feed.notifyEnabled),
+          onToggleNsfw: () => handleToggleNsfw(feed.id, feed.isNsfw),
           onMoveToCategory: (catId) => handleMoveFeedToCategory(feed.id, catId),
           onMarkAllRead: () => handleMarkFeedRead(feed.id),
         }}

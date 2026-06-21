@@ -30,6 +30,7 @@ model Feed {
   lastError   String?
   lastRefresh DateTime?
   notifyEnabled Boolean @default(false)
+  isNsfw        Boolean @default(false)
 }
 
 model Article {
