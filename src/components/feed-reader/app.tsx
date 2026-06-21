@@ -799,6 +799,17 @@ export default function FeedReaderApp() {
                 }
                 return null;
               })()}
+              {selectedFeedId && (() => {
+                const feed = feeds.find((f) => f.id === selectedFeedId);
+                if (feed?.isNsfw) {
+                  return (
+                    <span className="text-[9px] bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1 py-0.5 rounded font-bold uppercase tracking-wider" title="NSFW">
+                      nsfw
+                    </span>
+                  );
+                }
+                return null;
+              })()}
             </div>
             {isRefreshing && (
               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />

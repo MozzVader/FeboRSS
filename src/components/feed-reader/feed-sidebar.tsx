@@ -196,11 +196,6 @@ function SortableFeedItem({
             </span>
             <FeedIcon src={feed.imageUrl} />
             <div className="flex-1 min-w-0 text-left text-[13px] truncate max-w-full" title={feed.title}>{truncatedTitle}</div>
-            {feed.isNsfw && (
-              <span className="text-[9px] bg-orange-500/15 text-orange-600 dark:text-orange-400 px-1 py-0.5 rounded font-bold uppercase tracking-wider shrink-0" title="NSFW">
-                nsfw
-              </span>
-            )}
             {feed.unreadCount > 0 && (
               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">
                 {feed.unreadCount}
