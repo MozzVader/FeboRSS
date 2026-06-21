@@ -125,7 +125,7 @@ function DroppableCategoryZone({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-md transition-colors ${isOver ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
+      className={`rounded-md transition-colors overflow-hidden min-w-0 ${isOver ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
     >
       {children}
     </div>
