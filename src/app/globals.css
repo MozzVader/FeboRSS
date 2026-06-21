@@ -198,6 +198,16 @@
   border-radius: 0.5rem;
 }
 
+/* Fix: Radix ScrollArea Viewport uses display:table + min-width:100%
+   which prevents CSS text-overflow:ellipsis from working in sidebar.
+   Override to block display so truncation chain works. */
+[data-slot="scroll-area-viewport"] {
+  display: block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
