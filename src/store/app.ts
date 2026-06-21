@@ -50,6 +50,16 @@ function saveExpandedCategories(categories: Set<string>) {
   } catch { /* ignore */ }
 }
 
+function loadRedditCredentials(): { user: string; feed: string } {
+  if (typeof window === "undefined") return { user: "", feed: "" };
+  try {
+    const user = localStorage.getItem("febo:redditUser") || "";
+    const feed = localStorage.getItem("febo:redditFeed") || "";
+    return { user, feed };
+  } catch { /* ignore */ }
+  return { user: "", feed: "" };
+}
+
 export type FilterType = "all" | "unread" | "starred";
 
 interface ArticleItem {
@@ -113,6 +123,8 @@ interface AppState {
   globalMute: boolean;
   viewMode: "cards" | "compact";
   refreshInterval: number; // minutes, 0 = off
+  redditUser: string;
+  redditFeed: string;
 
   setFeeds: (feeds: FeedItem[]) => void;
   setCategories: (categories: CategoryItem[]) => void;
@@ -140,6 +152,7 @@ interface AppState {
   toggleGlobalMute: () => void;
   setViewMode: (mode: "cards" | "compact") => void;
   setRefreshInterval: (minutes: number) => void;
+  setRedditCredentials: (user: string, feed: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -162,6 +175,8 @@ export const useAppStore = create<AppState>((set) => ({
   globalMute: loadGlobalMute(),
   viewMode: loadViewMode(),
   refreshInterval: loadRefreshInterval(),
+  redditUser: loadRedditCredentials().user,
+  redditFeed: loadRedditCredentials().feed,
 
   setFeeds: (feeds) => set({ feeds }),
   setCategories: (categories) => set({ categories }),
@@ -270,5 +285,10 @@ export const useAppStore = create<AppState>((set) => ({
     set(() => {
       try { localStorage.setItem("febo:refreshInterval", String(minutes)); } catch { /* ignore */ }
       return { refreshInterval: minutes };
+    }),
+  setRedditCredentials: (user, feed) =>
+    set(() => {
+      try { localStorage.setItem("febo:redditUser", user); localStorage.setItem("febo:redditFeed", feed); } catch { /* ignore */ }
+      return { redditUser: user, redditFeed: feed };
     }),
 }));

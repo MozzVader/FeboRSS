@@ -8,6 +8,23 @@ const parser = new Parser({
   },
 });
 
+/**
+ * Append Reddit user= and feed= credentials to a Reddit RSS URL.
+ * Without these params, Reddit enforces 1 req/min (HTTP 429).
+ * The user and feed tokens come from the user's Reddit RSS preferences page.
+ */
+export function applyRedditCredentials(url: string, redditUser: string, redditFeed: string): string {
+  if (!redditUser || !redditFeed) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set("user", redditUser);
+    u.searchParams.set("feed", redditFeed);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 /** Check if a feed URL belongs to Reddit */
 export function isRedditFeed(url: string): boolean {
   return /reddit\.com/i.test(url);
@@ -222,8 +239,12 @@ export interface ParsedArticle {
   publishedAt?: Date;
 }
 
-export async function parseFeedUrl(url: string): Promise<ParsedFeed> {
-  const feed = await parser.parseURL(url);
+export async function parseFeedUrl(url: string, redditUser?: string, redditFeed?: string): Promise<ParsedFeed> {
+  let fetchUrl = url;
+  if (isRedditFeed(url) && redditUser && redditFeed) {
+    fetchUrl = applyRedditCredentials(url, redditUser, redditFeed);
+  }
+  const feed = await parser.parseURL(fetchUrl);
   const reddit = isRedditFeed(url);
 
   const items: ParsedArticle[] = feed.items

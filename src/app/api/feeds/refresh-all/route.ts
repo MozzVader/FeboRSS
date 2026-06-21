@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { parseFeedUrl, isRedditFeed } from "@/lib/rss";
 
@@ -7,8 +7,17 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  let redditUser = "";
+  let redditFeed = "";
   try {
+    // Extract Reddit credentials from request body (optional)
+    try {
+      const body = await request.json();
+      redditUser = body.redditUser || "";
+      redditFeed = body.redditFeed || "";
+    } catch { /* no body or invalid JSON — proceed without credentials */ }
+
     const feeds = await db.feed.findMany({ select: { id: true, url: true, title: true, notifyEnabled: true } });
     let totalNew = 0;
     const newPerFeed: { feedId: string; feedTitle: string; notifyEnabled: boolean; count: number }[] = [];
@@ -20,7 +29,7 @@ export async function POST() {
     // Process non-Reddit feeds first (no delay needed)
     for (const feed of otherFeeds) {
       try {
-        const result = await processFeed(feed);
+        const result = await processFeed(feed, redditUser, redditFeed);
         totalNew += result.newCount;
         if (result.newCount > 0) {
           newPerFeed.push({ feedId: feed.id, feedTitle: feed.title, notifyEnabled: feed.notifyEnabled, count: result.newCount });
@@ -30,12 +39,14 @@ export async function POST() {
       }
     }
 
-    // Process Reddit feeds with staggered delays (3s between each)
+    // Process Reddit feeds with staggered delays (65s between each if no credentials,
+    // 3s if credentials are set — the user= & feed= params bypass the strict rate limit)
+    const redditDelay = redditUser && redditFeed ? 3000 : 65000;
     for (let i = 0; i < redditFeeds.length; i++) {
       const feed = redditFeeds[i];
       try {
-        if (i > 0) await sleep(3000);
-        const result = await processFeed(feed);
+        if (i > 0) await sleep(redditDelay);
+        const result = await processFeed(feed, redditUser, redditFeed);
         totalNew += result.newCount;
         if (result.newCount > 0) {
           newPerFeed.push({ feedId: feed.id, feedTitle: feed.title, notifyEnabled: feed.notifyEnabled, count: result.newCount });
@@ -73,8 +84,8 @@ export async function POST() {
 
 type FeedRow = { id: string; url: string; title: string; notifyEnabled: boolean };
 
-async function processFeed(feed: FeedRow) {
-  const parsed = await parseFeedUrl(feed.url);
+async function processFeed(feed: FeedRow, redditUser?: string, redditFeed?: string) {
+  const parsed = await parseFeedUrl(feed.url, redditUser, redditFeed);
   let newCount = 0;
 
   for (const item of parsed.items) {

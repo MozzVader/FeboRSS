@@ -67,6 +67,8 @@ export default function FeedReaderApp() {
     selectCategory,
     toggleGlobalMute,
     setViewMode,
+    redditUser,
+    redditFeed,
   } = useAppStore();
 
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -93,7 +95,11 @@ export default function FeedReaderApp() {
   const handleRefreshAll = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch("/api/feeds/refresh-all", { method: "POST" });
+      const res = await fetch("/api/feeds/refresh-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ redditUser, redditFeed }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
@@ -194,7 +200,7 @@ export default function FeedReaderApp() {
       const res = await fetch("/api/feeds/refresh", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedId: selectedFeedId }),
+        body: JSON.stringify({ feedId: selectedFeedId, redditUser, redditFeed }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

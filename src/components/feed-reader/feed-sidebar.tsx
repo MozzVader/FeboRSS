@@ -48,6 +48,7 @@ import {
   RefreshCw,
   Star,
   Inbox,
+  Settings,
   BookOpen,
   Loader2,
   Newspaper,
@@ -338,6 +339,9 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
   const [editFeedTitle, setEditFeedTitle] = useState("");
   const [editFeedUrl, setEditFeedUrl] = useState("");
   const [editFeedLoading, setEditFeedLoading] = useState(false);
+  const [redditDialogOpen, setRedditDialogOpen] = useState(false);
+  const [redditEditUser, setRedditEditUser] = useState("");
+  const [redditEditFeed, setRedditEditFeed] = useState("");
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -362,6 +366,9 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
     focusedSidebarItemId,
     refreshInterval,
     setRefreshInterval,
+    redditUser,
+    redditFeed,
+    setRedditCredentials,
   } = useAppStore();
 
   const { toast } = useToast();
@@ -374,6 +381,21 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
   const uncategorizedFeeds = feeds.filter((f) => !f.categoryId);
 
   /* ── Handlers ── */
+
+  const handleOpenRedditDialog = () => {
+    setRedditEditUser(redditUser);
+    setRedditEditFeed(redditFeed);
+    setRedditDialogOpen(true);
+  };
+
+  const handleSaveReddit = () => {
+    setRedditCredentials(redditEditUser.trim(), redditEditFeed.trim());
+    setRedditDialogOpen(false);
+    toast({
+      title: "Credenciales de Reddit guardadas",
+      description: redditEditUser.trim() ? "Se aplicaran automaticamente a tus feeds de Reddit" : "Se usara el rate limit estandar (1 req/min)",
+    });
+  };
 
   const handleAddFeed = async () => {
     if (!addUrl.trim()) return;
@@ -806,6 +828,9 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button variant="ghost" size="icon" className={`h-8 w-8 ${mounted && redditUser ? "text-orange-500" : ""}`} title="Configurar Reddit RSS" onClick={handleOpenRedditDialog}>
+            <Settings className="h-3.5 w-3.5" />
+          </Button>
           <Dialog open={newCatOpen} onOpenChange={setNewCatOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" title="Nueva categoria">
@@ -1084,6 +1109,50 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reddit RSS settings dialog */}
+      <Dialog open={redditDialogOpen} onOpenChange={setRedditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configuracion de Reddit RSS</DialogTitle>
+            <DialogDescription>
+              Reddit ahora requiere parametros user= y feed= para evitar rate limiting (HTTP 429). Encontra estos valores en tus preferencias de RSS de Reddit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">user</label>
+              <Input
+                placeholder="Tu token de user de Reddit"
+                value={redditEditUser}
+                onChange={(e) => setRedditEditUser(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">feed</label>
+              <Input
+                placeholder="Tu token de feed de Reddit"
+                value={redditEditFeed}
+                onChange={(e) => setRedditEditFeed(e.target.value)}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground space-y-1 pt-1">
+              <p>1. Andá a <span className="font-mono">reddit.com/prefs/feeds</span></p>
+              <p>2. Los valores de user y feed son los mismos para todos tus feeds RSS</p>
+              <p>3. Sin estos parametros, el limite es de 1 request por minuto</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="ghost" onClick={() => setRedditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveReddit}>
+              <Settings className="h-4 w-4" />
+              Guardar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const parsed = await parseFeedUrl(feed.url);
+    const parsed = await parseFeedUrl(feed.url, body.redditUser, body.redditFeed);
 
     let newCount = 0;
 
