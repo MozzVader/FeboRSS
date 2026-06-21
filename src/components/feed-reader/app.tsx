@@ -105,19 +105,16 @@ export default function FeedReaderApp() {
       const catsData = await catsRes.json();
       setCategories(catsData);
 
-      // Send browser notifications for feeds with new articles
-      if (data.newPerFeed && Array.isArray(data.newPerFeed)) {
-        for (const feed of data.newPerFeed) {
-          if (feed.notifyEnabled && feed.count > 0) {
-            showNotification(feed.feedTitle, `${feed.count} articulo${feed.count > 1 ? "s" : ""} nuevo${feed.count > 1 ? "s" : ""}`);
-          }
-        }
+      // Notify about new articles (aggregated — one toast or one desktop notification)
+      const notifFeeds = (data.newPerFeed || []).filter((f: { notifyEnabled: boolean; count: number }) => f.notifyEnabled && f.count > 0);
+      if (notifFeeds.length > 0) {
+        notifyNewArticles(notifFeeds.map((f: { feedTitle: string; count: number }) => ({ feedTitle: f.feedTitle, count: f.count })));
+      } else {
+        toast({
+          title: "Feeds actualizados",
+          description: `${data.newArticles} articulos nuevos`,
+        });
       }
-
-      toast({
-        title: "Feeds actualizados",
-        description: `${data.newArticles} articulos nuevos`,
-      });
     } catch {
       toast({
         title: "Error al actualizar",
@@ -129,26 +126,65 @@ export default function FeedReaderApp() {
     }
   }, [setFeeds, setCategories, setIsRefreshing, toast]);
 
-  const showNotification = (title: string, body: string) => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    if (Notification.permission !== "granted") return;
+  /**
+   * Aggregate and notify about new articles.
+   * - When app is visible: show a single toast with summary
+   * - When app is hidden: show a single desktop notification with summary
+   * - When globalMute is on: skip entirely
+   */
+  const notifyNewArticles = (newPerFeed: { feedTitle: string; count: number }[]) => {
     if (useAppStore.getState().globalMute) return;
+    if (!newPerFeed || newPerFeed.length === 0) return;
 
-    // Check if page is visible — don't notify if user is actively using the app
-    if (!document.hidden) return;
+    const totalNew = newPerFeed.reduce((sum, f) => sum + f.count, 0);
+    const feedNames = newPerFeed.map((f) => f.feedTitle);
+    const feedCount = newPerFeed.length;
 
-    try {
-      const notification = new Notification(title, {
-        body,
-        icon: "/logo.png",
-        tag: `feborss-${Date.now()}`,
-      });
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-    } catch {
-      // Notification API not available
+    // Singular or plural helpers
+    const plural = (n: number) => n > 1 ? "s" : "";
+
+    if (document.hidden) {
+      // App in background → desktop notification
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        try {
+          let title: string;
+          let body: string;
+
+          if (feedCount === 1) {
+            title = feedNames[0];
+            body = `${totalNew} artículo${plural(totalNew)} nuevo${plural(totalNew)}`;
+          } else {
+            title = "FeboRSS";
+            body = `${feedCount} feeds con ${totalNew} artículo${plural(totalNew)} nuevo${plural(totalNew)}`;
+          }
+
+          const notification = new Notification(title, {
+            body,
+            icon: "/favicon.ico",
+            tag: "feborss-update",
+          });
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+          };
+        } catch {
+          // Notification API not available
+        }
+      }
+    } else {
+      // App is visible → show a toast with summary
+      let title: string;
+      let description: string;
+
+      if (feedCount === 1) {
+        title = feedNames[0];
+        description = `${totalNew} artículo${plural(totalNew)} nuevo${plural(totalNew)}`;
+      } else {
+        title = "Nuevos artículos";
+        description = `${feedCount} feeds actualizados con ${totalNew} artículo${plural(totalNew)} nuevo${plural(totalNew)} en total`;
+      }
+
+      toast({ title, description });
     }
   };
 
@@ -171,14 +207,13 @@ export default function FeedReaderApp() {
       if (data.newArticles > 0) {
         const currentFeed = useAppStore.getState().feeds.find((f) => f.id === selectedFeedId);
         if (currentFeed?.notifyEnabled) {
-          showNotification(currentFeed.title, `${data.newArticles} articulo${data.newArticles > 1 ? "s" : ""} nuevo${data.newArticles > 1 ? "s" : ""}`);
+          notifyNewArticles([{ feedTitle: currentFeed.title, count: data.newArticles }]);
+        } else {
+          toast({ title: "Feed actualizado", description: `${data.newArticles} articulos nuevos` });
         }
+      } else {
+        toast({ title: "Feed actualizado", description: "Sin artículos nuevos" });
       }
-
-      toast({
-        title: "Feed actualizado",
-        description: `${data.newArticles} articulos nuevos`,
-      });
     } catch {
       toast({ title: "Error al actualizar el feed", variant: "destructive" });
     }
