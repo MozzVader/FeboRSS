@@ -159,7 +159,7 @@ function SortableFeedItem({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: feed.id });
 
-  const maxTitleLen = 27;
+  const maxTitleLen = 20;
   const truncatedTitle = feed.title.length > maxTitleLen
     ? feed.title.slice(0, maxTitleLen) + '…'
     : feed.title;
@@ -859,7 +859,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
                           >
                             <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                             <Folder className={`h-4 w-4 flex-shrink-0 ${isCatSelected ? "text-amber-500" : ""}`} />
-                            <div className="flex-1 min-w-0 text-left text-[13px] truncate max-w-full" title={cat.name}>{cat.name.length > 22 ? cat.name.slice(0, 22) + '…' : cat.name}</div>
+                            <div className="flex-1 min-w-0 text-left text-[13px] truncate max-w-full" title={cat.name}>{cat.name.length > 20 ? cat.name.slice(0, 20) + '…' : cat.name}</div>
                             {catTotalUnread > 0 && (
                               <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">{catTotalUnread}</span>
                             )}
