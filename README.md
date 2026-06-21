@@ -51,7 +51,7 @@ Lectura de feeds sin distracciones, con todo lo que necesitás y nada que sobre.
 - **Detección de feeds caídos**: ícono rojo de advertencia cuando un feed falla al refrescar
 - **Auto-refresh configurable**: Off, 5, 15, 30 o 60 minutos desde el sidebar
 - **Backpatch inteligente**: se actualizan artículos existentes con datos faltantes (contenido HTML, imágenes)
-- **Rate limiting inteligente**: los feeds de Reddit se procesan con delay escalonado para evitar errores 429
+- **Reddit RSS anti-429**: configurá tus credenciales `user=` y `feed=` desde `reddit.com/prefs/feeds` para evitar rate limiting. Sin ellas, el delay entre feeds de Reddit es de 65s (1 req/min); con credenciales baja a 3s
 
 ### 🎨 Interfaz
 - **Tema claro/oscuro** con persistencia
