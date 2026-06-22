@@ -915,7 +915,7 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
       <Separator />
 
       {/* Feeds list with DnD */}
-      <ScrollArea className="flex-1 w-full px-2 py-1">
+      <ScrollArea className="flex-1 min-h-0 w-full px-2 py-1">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
