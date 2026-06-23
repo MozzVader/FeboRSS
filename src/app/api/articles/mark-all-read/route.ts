@@ -3,10 +3,18 @@ import { db } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
-    const { feedId } = await request.json();
+    const { feedId, categoryId } = await request.json();
 
     const where: Record<string, unknown> = { isRead: false };
-    if (feedId) where.feedId = feedId;
+    if (feedId) {
+      where.feedId = feedId;
+    } else if (categoryId) {
+      const feedsInCategory = await db.feed.findMany({
+        where: { categoryId },
+        select: { id: true },
+      });
+      where.feedId = { in: feedsInCategory.map((f) => f.id) };
+    }
 
     const result = await db.article.updateMany({
       where,

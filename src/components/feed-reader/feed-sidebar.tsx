@@ -451,6 +451,35 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
     }
   };
 
+  const handleMarkCategoryRead = async (categoryId: string) => {
+    try {
+      const cat = categories.find((c) => c.id === categoryId);
+      const feedIds = cat?.feeds.map((f) => f.id) ?? [];
+      await fetch("/api/articles/mark-all-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId }),
+      });
+      // Reload feeds and categories to get accurate unread counts
+      const feedsRes = await fetch("/api/feeds");
+      const feedsData = await feedsRes.json();
+      setFeeds(feedsData);
+      const catsRes = await fetch("/api/categories");
+      const catsData = await catsRes.json();
+      setCategories(catsData);
+      // Update local articles
+      const store = useAppStore.getState();
+      const updatedArticles = store.articles.map((a) =>
+        feedIds.includes(a.feedId) ? { ...a, isRead: true } : a
+      );
+      const newUnreadCount = updatedArticles.filter((a) => !a.isRead).length;
+      store.setArticles(updatedArticles, store.nextCursor, newUnreadCount, store.starredCount);
+      toast({ title: "Categoria marcada como leida" });
+    } catch {
+      toast({ title: "Error al marcar como leidos", variant: "destructive" });
+    }
+  };
+
   const handleDeleteFeed = async (id: string) => {
     try {
       const res = await fetch("/api/feeds", {
@@ -991,6 +1020,13 @@ export function FeedSidebar({ onRefreshAll, isRefreshing }: FeedSidebarProps) {
                         >
                           <Pencil className="h-4 w-4" />
                           Renombrar
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() => handleMarkCategoryRead(cat.id)}
+                          className="gap-2"
+                        >
+                          <CheckCheck className="h-4 w-4" />
+                          Marcar todo como leido
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
