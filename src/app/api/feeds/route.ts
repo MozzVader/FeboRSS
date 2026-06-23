@@ -4,6 +4,13 @@ import { parseFeedUrl } from "@/lib/rss";
 
 export async function GET() {
   try {
+    // Get NSFW feed IDs to exclude from unread counts
+    const nsfwFeeds = await db.feed.findMany({
+      where: { isNsfw: true },
+      select: { id: true },
+    });
+    const nsfwFeedIds = new Set(nsfwFeeds.map((f) => f.id));
+
     const feeds = await db.feed.findMany({
       orderBy: [{ position: "asc" }, { createdAt: "desc" }],
       include: {
@@ -24,7 +31,8 @@ export async function GET() {
         position: f.position,
         categoryId: f.categoryId,
         createdAt: f.createdAt,
-        unreadCount: f._count.articles,
+        // Exclude NSFW articles from unread count
+        unreadCount: f.isNsfw ? 0 : f._count.articles,
         lastError: f.lastError,
         lastRefresh: f.lastRefresh,
         notifyEnabled: f.notifyEnabled,

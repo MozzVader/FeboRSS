@@ -44,6 +44,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Always fetch NSFW feed IDs for global unread count (badge must always exclude NSFW)
+    if (nsfwFeedIds.length === 0) {
+      nsfwFeedIds = await db.feed.findMany({
+        where: { isNsfw: true },
+        select: { id: true },
+      });
+    }
+
     const articles = await db.article.findMany({
       where,
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
@@ -59,14 +67,14 @@ export async function GET(request: NextRequest) {
       nextCursor = next!.id;
     }
 
-    // Build base where for counts (exclude NSFW for unread, but allow for starred)
-    const countWhereUnread: Record<string, unknown> = {};
-    if (excludeNsfw) {
-      countWhereUnread.feedId = { notIn: nsfwFeedIds.map((f) => f.id) };
+    // Global unread count ALWAYS excludes NSFW feeds
+    const unreadCountWhere: Record<string, unknown> = { isRead: false, isHidden: false };
+    if (nsfwFeedIds.length > 0) {
+      unreadCountWhere.feedId = { notIn: nsfwFeedIds.map((f) => f.id) };
     }
 
     const unreadCount = await db.article.count({
-      where: { ...countWhereUnread, isRead: false, isHidden: false },
+      where: unreadCountWhere,
     });
     const starredCount = await db.article.count({
       where: { isStarred: true, isHidden: false },
