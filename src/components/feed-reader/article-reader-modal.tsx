@@ -64,11 +64,9 @@ function decodeAmp(url: string): string {
 
 function addTargetBlankToLinks(html: string): string {
   return html.replace(
-    /<a\s+([^>]*?)href=["'][^"']*["']/gi,
+    /<a\s+(?!.*?\btarget\s*=\s*["']?_blank\b)([^>]*?)>/gi,
     (match, attrs) => {
-      // If it already has target="_blank", leave it as-is
-      if (/\btarget\s*=\s*["']_blank["']/i.test(attrs)) return match;
-      return `<a ${attrs}target="_blank" rel="noopener noreferrer"`;
+      return `<a ${attrs}target="_blank" rel="noopener noreferrer">`;
     }
   );
 }
